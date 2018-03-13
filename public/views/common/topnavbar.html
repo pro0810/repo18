@@ -1,0 +1,43 @@
+<div class="row border-bottom">
+  <nav class="navbar navbar-static-top" role="navigation" style="margin-bottom: 0">
+    <div class="navbar-header">
+      <span minimaliza-sidebar></span>
+    </div>
+    <ul class="nav navbar-top-links navbar-right">
+      <li uib-dropdown>
+        <a class="count-info" href uib-dropdown-toggle>
+          Train
+        </a>
+        <ul uib-dropdown-menu class="animated fadeInRight m-t-xs" ng-controller="translateCtrl">
+          <li><a ng-click="changeLanguage('en')">Online</a></li>
+          <li><a ng-click="changeLanguage('es')">API</a></li>
+        </ul>
+      </li>
+      <li uib-dropdown>
+        <a class="count-info" href uib-dropdown-toggle>
+          Use
+        </a>
+        <ul uib-dropdown-menu class="animated fadeInRight m-t-xs" ng-controller="translateCtrl">
+          <li ui-sref-active="active"><a ui-sref="dashboards.dashboard_3">Online</a></li>
+          <li><a ng-click="changeLanguage('en')">API</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href><span class="m-r-sm text-muted welcome-message">History</span></a>
+      </li>
+      <li>
+        <a href><span class="m-r-sm text-muted welcome-message">Pricing</span></a>
+      </li>
+      <li uib-dropdown>
+        <a class="count-info" href uib-dropdown-toggle>
+          Account
+        </a>
+        <ul uib-dropdown-menu class="animated fadeInRight m-t-xs" ng-controller="translateCtrl">
+          <li ui-sref-active="active"><a ui-sref="logins">Log in</a></li>
+          <li><a ng-click="changeLanguage('es')">Subscription</a></li>
+          <li><a ng-click="logout()">Sign out</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</div>

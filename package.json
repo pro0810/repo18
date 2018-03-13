@@ -1,0 +1,24 @@
+{
+  "name": "MEAN",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "./node_modules/nodemon/bin/nodemon.js ./bin/www"
+  },
+  "dependencies": {
+    "nodemon": "",
+    "body-parser": "",
+    "cookie-parser": "",
+    "connect-mongo": "",
+    "debug": "",
+    "ejs": "",
+    "express": "",
+    "express-session": "",
+    "mongoose": "^5.0.0",
+    "morgan": "",
+    "serve-favicon": "",
+    "passport": "",
+    "passport-local": "",
+    "passport-local-mongoose": "",
+    "request": ""
+  }
+}

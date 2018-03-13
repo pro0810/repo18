@@ -1,0 +1,27 @@
+<nav class="navbar-default navbar-static-side" role="navigation" ng-controller="identityCtrl">
+    <div class="sidebar-collapse">
+        <ul side-navigation class="nav metismenu" id="side-menu">
+            <li class="nav-header">
+                <div class="profile-element" uib-dropdown>
+                    <a href><h1>Contract.fit</h1></a>
+                </div>
+                <h3>{{identity.name}}</h3>
+            </li>
+            <li ui-sref-active="active" ng-if="identity.domain != 'intolaw'">
+                <a ui-sref="stats"><i class="fa fa-pie-chart"></i> <span class="nav-label">{{ 'Stats' | translate }}</span> </a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="activity"><i class="fa fa-diamond"></i> <span class="nav-label">{{ 'Activity' | translate }}</span> </a>
+            </li>
+            <li ui-sref-active="active" ng-if="identity.domain != 'pom' && identity.domain != 'bpost'">
+                <a ui-sref="upload"><i class="fa fa-cloud-upload"></i> <span class="nav-label">{{ 'Upload' | translate }}</span></a>
+            </li>
+            <!-- <li ui-sref-active="active" ng-if="false">
+                <a ui-sref="view"><i class="fa fa-flask"></i> <span class="nav-label">{{ 'View' | translate }}</span></a>
+            </li> -->
+            <li ui-sref-active="active">
+                <a ui-sref="logins"><span class="nav-label">{{ 'Change user' | translate }}</span></a>
+            </li>
+        </ul>
+    </div>
+</nav>
