@@ -8,7 +8,6 @@
 
 function LoginCtrl($scope, $state, principal) {
     $scope.credentials = {};
-
     $scope.signIn = function() {
         principal.authenticate($scope.credentials).then(function(identity) {
             // identifyCtrl($scope, $state, principal);
@@ -32,45 +31,123 @@ function LoginCtrl($scope, $state, principal) {
 };
 
 function identityCtrl($scope, $state, principal) {
-    $scope.identity = {};
-    principal.identity().then(function(identity) {
-        $scope.identity = identity;
-    });
+
 }
 
-function uploadCtrl($scope, $http, $location, $state, FileUploader) {
-    $scope.uploader = new FileUploader({
-        url: '/upload'
-    });
-}
-
-function statsCtrl($scope, $http, $location, $state, principal) {
-    $scope.period = "month";
-    $scope.graphVolume = null;
-    $scope.volumes = null;
-    $scope.timings = null;
-    $scope.accuracyItems = [];
-    $scope.stats = {};
-
-    $scope.getAccuracy = function() {
-        principal.identity().then(function(identity) {
-            var _arr = ['amount', 'IBAN', 'message', 'name'];
-            if (identity.domain === 'bpost' || identity.domain === 'suuha') {
-                _arr = ['amount', 'IBAN', 'message', 'name', 'person', 'street', 'number', 'zip']
+function accuracyCtrl($scope, $location, $state, $http, principal) {
+    function getDataForAccuracyFromDocument() {
+        var _arr = ['amount', 'IBAN', 'message', 'name', 'person', 'street', 'number', 'zip'];
+        var groups = ['correct', 'present', 'incorrect', 'missing'];
+        var columns = [];
+        columns.length = groups.length;
+        for (var i = 0; i < groups.length; i++) {
+            columns[i] = [];
+            columns[i].push(groups[i]);
+            for (var j = 0; j < _arr.length; j++) {
+                columns[i].push(0);
             }
-            var groups = ['correct', 'present', 'incorrect', 'missing'];
+        }
+        var groupedColumns = {};
+        for (var i = 0; i < columns.length; i++) {
+            groupedColumns[columns[i][0]] = columns[i];
+        }
+        var graph = c3.generate({
+            bindto: '#accuracy-chart',
+            axis: {
+                rotated: true,
+                x: {
+                    type: 'category',
+                    categories: _arr
+                }
+            },
+            data: {
+                columns: columns,
+                type: 'bar',
+                groups: [groups],
+                order: null,
+                colors: {
+                    'correct': 'rgb(44, 160, 44)',
+                    'present': 'rgb(31, 119, 180)',
+                    'incorrect': 'rgb(214, 39, 40)',
+                    'missing': 'rgb(255, 127, 14)'
+                },
+                onclick: function(data) {
+                    $location.url('/activity/' + 'IBAN' + '/' + data.id);
+                    $scope.$apply();
+                }
+            }
+        });
+        for (var _i = 0; _i < _arr.length; _i++) {
+            var param = _arr[_i];
+            (function(paramIndex, param) {
+                $http.get('/accuracy/' + param)
+                    .success(function(counts) {
+                        var amounts = {
+                            correct: 0,
+                            incorrect: 0,
+                            present: 0,
+                            missing: 0
+                        };
+                        for (var count_index in counts) {
+                            var count = counts[count_index]
+                            if (count.feedback === true) {
+                                if (count.correct) {
+                                    amounts['correct'] += count.count;
+                                } else {
+                                    amounts['incorrect'] += count.count;
+                                }
+                            } else if (count.feedback === false) {
+                                if (count.present) {
+                                    amounts['present'] += count.count;
+                                } else {
+                                    amounts['missing'] += count.count;
+                                }
+                            }
+                        }
+                        for (var i = 0; i < groups.length; i++) {
+                            groupedColumns[groups[i]][1 + paramIndex] = amounts[groups[i]];
+                        }
+                        graph.load({
+                            columns: columns
+                        });
+                        console.log(param, amounts['correct'], amounts['present'], amounts['incorrect'], amounts['missing'])
+                    });
+            })(_i, param);
+        }
+    }
+
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        getDataForAccuracyFromNewDocument();
+    });
+
+    function getDataForAccuracyFromNewDocument() {
+        $http.get('/newaccuracy', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
+            console.log(counts);
+            // debugger;
+            var _arr = [];
+            var groups = ['OK', 'A', 'B'];
             var columns = [];
-            columns.length = groups.length;
+            for (var countIndex in counts) {
+                if (! _arr.includes(counts[countIndex]['_id']['label'])) {
+                    _arr.push(counts[countIndex]['_id']['label']);
+                }
+            }
             for (var i = 0; i < groups.length; i++) {
                 columns[i] = [];
                 columns[i].push(groups[i]);
                 for (var j = 0; j < _arr.length; j++) {
-                    columns[i].push(0);
+                    var emptyValue = true;
+                    for (var countIndex in counts){
+                        if (counts[countIndex]['_id']['label'] === _arr[j] && counts[countIndex]['_id']['correct'] === groups[i]) {
+                            columns[i].push(counts[countIndex]['counts']);
+                            emptyValue = false;
+                            break;
+                        }
+                    }
+                    if (emptyValue) {
+                        columns[i].push(0);
+                    }
                 }
-            }
-            var groupedColumns = {};
-            for (var i = 0; i < columns.length; i++) {
-                groupedColumns[columns[i][0]] = columns[i];
             }
             var graph = c3.generate({
                 bindto: '#accuracy-chart',
@@ -87,10 +164,9 @@ function statsCtrl($scope, $http, $location, $state, principal) {
                     groups: [groups],
                     order: null,
                     colors: {
-                        'correct': 'rgb(44, 160, 44)',
-                        'present': 'rgb(31, 119, 180)',
-                        'incorrect': 'rgb(214, 39, 40)',
-                        'missing': 'rgb(255, 127, 14)'
+                        'OK': 'rgb(44, 160, 44)',
+                        'A': 'rgb(31, 119, 180)',
+                        'B': 'rgb(214, 39, 40)',
                     },
                     onclick: function(data) {
                         $location.url('/activity/' + 'IBAN' + '/' + data.id);
@@ -98,190 +174,411 @@ function statsCtrl($scope, $http, $location, $state, principal) {
                     }
                 }
             });
-            for (var _i = 0; _i < _arr.length; _i++) {
-                var param = _arr[_i];
-                (function(paramIndex, param) {
-                    $http.get('/accuracy/' + param)
-                        .success(function(counts) {
-                            var amounts = {
-                                correct: 0,
-                                incorrect: 0,
-                                present: 0,
-                                missing: 0
-                            };
-                            for (var count_index in counts) {
-                                var count = counts[count_index]
-                                if (count.feedback === true) {
-                                    if (count.correct) {
-                                        amounts['correct'] += count.count;
-                                    } else {
-                                        amounts['incorrect'] += count.count;
-                                    }
-                                } else if (count.feedback === false) {
-                                    if (count.present) {
-                                        amounts['present'] += count.count;
-                                    } else {
-                                        amounts['missing'] += count.count;
-                                    }
-                                }
-                            }
-                            for (var i = 0; i < groups.length; i++) {
-                                groupedColumns[groups[i]][1 + paramIndex] = amounts[groups[i]];
-                            }
-                            graph.load({
-                                columns: columns
-                            });
-                            console.log(param, amounts['correct'], amounts['present'], amounts['incorrect'], amounts['missing'])
-                        });
-                })(_i, param);
-            }
         });
     }
 
-    $scope.getVolumes = function() {
-        console.log('getting volumes')
-        $http.get('/volumes').success(function(counts) {
-            console.log(counts)
-            $scope.volumes = counts;
+    $scope.getAccuracy = function() {
+        principal.identity().then(function(identity) {
+            var _arr = ['amount', 'IBAN', 'message', 'name'];
+            identity.domain = 'ag_health_split';
+            if (identity.domain === 'bpost' || identity.domain === 'suuha') {
+                getDataForAccuracyFromDocument();
+            } else if (identity.domain === 'ag_health_split') {
+                getDataForAccuracyFromNewDocument();
+            }
+        });
+    };
+}
+
+function statisticsCtrl($scope, $state, $location, principal, $http) {
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        $scope.getStatistics();
+    });
+    $scope.getStatistics = function() {
+        principal.identity().then(function(identity) {
+            var columns = [];
+            var column = ['statistics'];
+            var documentIds = {};
+            $http.get('/newstatistics', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
+                var _arr = [];
+                var docType_arr = [];
+                for (var i=20; i>=-1; i--) {
+                    docType_arr[20 - i] = []
+                    if (i == 20) {
+                        _arr.push("100%");
+                    } else if (i == -1) {
+                        _arr.push("0%");
+                    } else  {
+                        _arr.push(String(i * 5 + 5) + "~" + String(i * 5) + "%");
+                    }
+                    var num = 0;
+                    for (var j in documentIds) {
+                        var correct_cnt = 0;
+                        var incorrect_cnt = 0;
+                        for (var k in documentIds[j]['annotations']) {
+                            if (documentIds[j]['annotations'][k]['correct'] == 'OK') {
+                                correct_cnt ++;
+                            } else {
+                                incorrect_cnt ++;
+                            }
+                        }
+                        var percent = correct_cnt / (correct_cnt + incorrect_cnt) * 100;
+                        if (i == 20) {
+                            if (percent == 100) {
+                                num ++;
+                                docType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else if (i == -1) {
+                            if (percent == 0) {
+                                num ++;
+                                docType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else {
+                            if (percent >= i * 5 && percent < (i + 1) * 5) {
+                                num ++;
+                                docType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        }
+                    }
+                    column.push(num);
+                }
+                columns.push(column);
+                var graph = c3.generate({
+                    bindto: '#statistics-chart',
+                    axis: {
+                        // rotated: true,
+                        x: {
+                            type: 'category',
+                            categories: _arr
+                        }
+                    },
+                    data: {
+                        columns: columns,
+                        type: 'bar',
+                        onclick: function(data) {
+                            principal['activityFilter'] = docType_arr[data['index']];
+                            $location.path('activity');
+                            $scope.$apply();
+                        }
+                    }
+                });
+            });
+        });
+    };
+}
+
+function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
+    var changedTolerance = false;
+    var changedThreshold = false;
+    function updateThresholdLine() {
+        if ($scope.graph) {
+            $scope.graph.ygrids.remove();
+            $timeout(function () {
+                $scope.graph.ygrids.add({value: $scope.threshold});
+            }, 400);
+        }
+    }
+
+    $scope.$watch('threshold', function() {
+        var tolerance_cnt = 0;
+        if (!($scope.graph && $scope.column_B)) {
+            return;
+        }
+        if (changedThreshold) {
+            changedThreshold = false;
+            return;
+        }
+        for (var i in $scope.column_B) {
+            if ($scope.column_B[i] > $scope.threshold){
+                tolerance_cnt = $scope.column_B.length - parseInt(i);
+                break;
+            }
+        }
+        var tolerance;
+        if ($scope.column_B.length > 0) {
+            tolerance = (tolerance_cnt / $scope.column_B.length * 100).toFixed(2);
+        } else {
+            tolerance = 0;
+        }
+        if ($scope.tolerance != tolerance) {
+            $scope.tolerance = tolerance;
+            changedTolerance = true;
+        }
+        console.log('threshold');
+        console.log($scope.threshold);
+        console.log($scope.tolerance);
+        updateThresholdLine();
+    });
+
+    $scope.$watch('tolerance', function() {
+        var tolerance_cnt = 0;
+        if (!($scope.graph && $scope.column_B)) {
+            return;
+        }
+        if (changedTolerance) {
+            changedTolerance = false;
+            return;
+        }
+        for (var i in $scope.column_B) {
+            if ($scope.column_B[i] >= $scope.threshold){
+                tolerance_cnt = $scope.column_B.length - parseInt(i);
+                break;
+            }
+        }
+        if (tolerance_cnt != parseInt($scope.column_B.length * $scope.tolerance / 100)) {
+            tolerance_cnt = parseInt($scope.column_B.length * $scope.tolerance / 100);
+            if (tolerance_cnt < $scope.column_B.length * $scope.tolerance / 100) {
+                tolerance_cnt += 1;
+            }
+            var threshold;
+            if ($scope.column_B.length == tolerance_cnt) {
+                threshold = 0;
+            } else if (tolerance_cnt == 0) {
+                threshold = 100;
+            } else {
+                threshold = ($scope.column_B[$scope.column_B.length - tolerance_cnt] + $scope.column_B[$scope.column_B.length - tolerance_cnt - 1]) / 2;
+            }
+            if ($scope.threshold != threshold) {
+                changedThreshold = true;
+                $scope.threshold = threshold;
+                updateThresholdLine();
+            }
+        }
+        console.log('tolerance');
+        console.log($scope.threshold);
+        console.log($scope.tolerance);
+    });
+
+    $scope.$watchGroup(['selectedFieldType', 'selectedDocType', 'sDate', 'eDate'], function() {
+        $scope.getAwareness();
+    });
+
+    $scope.getAwareness = function() {
+        principal.levels().then(function(levels) {
+            var column_OK = ['OK'],
+             column_B = ['B'],
+             column_OK_x = ['OK_x'],
+             column_B_x = ['B_x'];
+            $http.get('/newawareness', {params: {"fieldType": $scope.selectedFieldType, "docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(data) {
+                var docType_arr = [],
+                    cnt = 0;
+
+                for (var i in data) {
+                    if (data[i]['annotations']['correct'] === 'B' && data[i]['annotations']['confidence'] != null) {
+                        column_B_x.push(parseInt(i) + 1);
+                        column_B.push(data[i]['annotations']['confidence']);
+                        docType_arr[cnt] = data[i]['id'];
+                        cnt ++;
+                    } else if (data[i]['annotations']['correct'] == 'OK') {
+                        column_OK_x.push(parseInt(i) + 1);
+                        column_OK.push(data[i]['annotations']['confidence']);
+                        docType_arr[cnt] = data[i]['id'];
+                        cnt ++;
+                    }
+                }
+                var columns = [column_OK_x, column_B_x, column_OK, column_B];
+
+                $scope.column_B = column_B.slice(1).sort(function(a, b){return a > b});
+                $scope.graph = c3.generate({
+                    bindto: '#awareness-chart',
+                    axis: {
+                        y: {
+                            min: 0,
+                            max: 105,
+                            padding: 0
+                        }
+                    },
+                    data: {
+                        xs: {OK: 'OK_x', B: 'B_x'},
+                        columns: columns,
+                        type: 'scatter',
+                        onclick: function(data) {
+                            $location.path("view/review/" + docType_arr[data['index']]);
+                            $scope.$apply();
+                        }
+                    },
+                    grid: {
+                        y: {
+                            lines: [{value: 100}]
+                        }
+                    },
+                    point: {
+                        r: 4
+                    }
+                });
+                if ($scope.threshold != undefined) {
+                    changedTolerance = true;
+                    changedThreshold = true;
+                }
+                $scope.threshold = 100;
+                $scope.tolerance = 0;
+                // updateThresholdLine();
+            });
         });
     };
 
+}
+
+function viewCtrl($scope, $sce, $state, $location, principal) {
+    if ($state.params.viewPath) {
+        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://52.157.179.171:5023/" + $state.params.viewPath + "/" + $state.params.viewId);
+        principal.currentViewUrl = $state.params.viewPath + "/" + $state.params.viewId;
+    } else {
+        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://52.157.179.171:5023/" + principal.currentViewUrl);
+        $location.path("view/" + principal.currentViewUrl);
+    }
+    console.log($scope.currentViewUrl);
+}
+
+function uploadCtrl($scope, $http, $location, $state, FileUploader) {
+    $scope.uploader = new FileUploader({
+        url: '/upload'
+    });
+}
+
+function volumeCtrl($scope, $http) {
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        $scope.getVolumes();
+        $scope.getStats();
+    });
+    $scope.getVolumes = function() {
+        console.log('getting volumes')
+        // $http.get('/volumes').success(function(counts) {
+        //     console.log(counts)
+        //     $scope.volumes = counts;
+        // });
+        $http.get('/newvolumes', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(volumes) {
+            console.log(volumes);
+            var dates = new Set();
+            volumes.forEach(function(c) {
+                c['dates'].forEach(function(d) {
+                    dates.add(d['date']);
+                });
+            });
+            var xValues = {};
+            var counter = 0;
+            Array.from(dates).sort().forEach(function(d) {
+                xValues[d] = counter;
+                counter++;
+            });
+
+            var columns = [];
+            var xColumn = Object.keys(xValues);
+            volumes.forEach(function(c) {
+                for (var i = 1, column = new Array(xColumn.length); i < xColumn.length;) {
+                    column[i++] = 0;
+                }
+                column[0] = c['subdomain'];
+                c['dates'].forEach(function(d) {
+                    column[xValues[d['date']] + 1] = d['count'];
+                });
+                columns.push(column);
+            });
+
+            var graph = c3.generate({
+                bindto: '#chart-volume',
+                data: {
+                    columns: columns,
+                },
+                axis: {
+                    x: {
+                        type: 'category',
+                        categories: xColumn.map(function(d) {
+                            return d.substr(5);
+                        })
+                    }
+                },
+                padding: {
+                    right: 30
+                }
+            });
+        });
+    };
+    $scope.getStats = function() {
+        // $http.get('/stats').success(function(avg) {
+        //     $scope.stats['before'] = avg.data;
+        //     $scope.stats['after'] = avg.feedback;
+        // });
+        $http.get('/newstats', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(avg) {
+            $scope.stats['before'] = avg.data;
+            $scope.stats['after'] = avg.feedback;
+        });
+    };
+}
+
+function statsCtrl($scope, $http, $location, $state, principal) {
+    $scope.period = "month";
+    $scope.timings = null;
+    $scope.accuracyItems = [];
+    $scope.stats = {};
+    $scope.daterange = principal.daterange;
+    $scope.$watch('daterange', function() {
+        $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10);
+        $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10);
+    }, true);
+
+    $scope.getDocTypes = function() {
+        principal.levels().then(function(levels){
+            $scope.docTypes = levels['doctype'];
+            $scope.fieldTypes = levels['fieldtype'];
+            $scope.rowTypes = levels['rowtype'];
+            $scope.selectedDocType = $scope.selectedDocType? $scope.selectedDocType:'All';
+            $scope.selectedFieldType = $scope.selectedFieldType? $scope.selectedFieldType:$scope.fieldTypes[0];
+            $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:'All';
+        });
+    };
+    $scope.dropdownMenuDocTypeSelected = function(docType) {
+        if (docType != $scope.selectedDocType) {
+            $scope.selectedDocType = docType;
+        }
+    };
+    $scope.dropdownMenuFieldTypeSelected = function(fieldType) {
+        if (fieldType != $scope.selectedFieldType) {
+            $scope.selectedFieldType = fieldType;
+        }
+    };
+    $scope.dropdownMenuRowTypeSelected = function(rowType) {
+        if (docType != $scope.selectedRowType) {
+            $scope.selectedRowType = rowType;
+        }
+    };
+
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        $scope.getTimings();
+    });
     $scope.getTimings = function() {
-        $http.get('/timings').success(function(timings) {
+        // $http.get('/timings').success(function(timings) {
+        //     for (var timingIndex in timings) {
+        //         timings[timingIndex] /= 1000;
+        //     }
+        //     $scope.timings = timings;
+        // });
+        $http.get('/newtimings', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
             for (var timingIndex in timings) {
                 timings[timingIndex] /= 1000;
             }
             $scope.timings = timings;
         });
     };
-
-    $scope.getStats = function() {
-        $http.get('/stats').success(function(avg) {
-            $scope.stats['before'] = avg.data;
-            $scope.stats['after'] = avg.feedback;
-        });
-    };
-
-    $scope.generateGraphVolume = function() {
-        var chart = document.getElementById('chart-volume');
-        chart.style.height = (chart.clientWidth / 3) + 'px';
-
-        if ($scope.volumes === null) {
-            return;
-        }
-
-        var dates = new Set();
-        $scope.volumes.forEach(function(c) {
-            c['dates'].forEach(function(d) {
-                dates.add(d['date']);
-            });
-        });
-
-        var xValues = {};
-        var counter = 0;
-        Array.from(dates).sort().forEach(function(d) {
-            xValues[d] = counter;
-            counter++;
-        });
-
-        var columns = [];
-        var xColumn = Object.keys(xValues);
-        $scope.volumes.forEach(function(c) {
-            for (var i = 1, column = new Array(xColumn.length); i < xColumn.length;) {
-                column[i++] = 0;
-            }
-            column[0] = c['subdomain'];
-            c['dates'].forEach(function(d) {
-                column[xValues[d['date']] + 1] = d['count'];
-            });
-            columns.push(column);
-        });
-        $scope.graphVolume = c3.generate({
-            bindto: '#chart-volume',
-            data: {
-                columns: columns
-            },
-            axis: {
-                x: {
-                    type: 'category',
-                    categories: xColumn.map(function(d) {
-                        return d.substr(8);
-                    })
-                }
-            },
-            padding: {
-                right: 30
-            }
-        });
-    }
-
-    $scope.$watch("volumes", function() {
-        if ($scope.volumes !== null) {
-            $scope.generateGraphVolume();
-        }
-    });
 }
 
 function activityCtrl($scope, $http, $location, $state, principal) {
-    identity = {}
+    identity = {};
     $scope.period = "month";
     $scope.activities = null;
     $scope.doneLoading = false;
-
     $scope.getActivity = function() {
-        principal.identity().then(function(identity) {
-            $http.get($location.path()).success(function(activity) {
-                for (var row_index in activity) {
-                    var row = activity[row_index];
-                    // row.workstation = "iPad";
-                    if (row.timings) {
-                        row.receivetime = new Date(row.timings.receive);
-                        row.starttime = new Date(row.timings.start);
-                        row.donetime = new Date(row.timings.done);
-                        row.feedbacktime = new Date(row.timings.feedback);
-                        row.leadtime = Math.round((row.donetime - row.receivetime) / 1000);
-                        row.processingtime = Math.round((row.donetime - row.starttime) / 1000)
-                    }
-                    if (row.data && row.data.tags) {
-                        for (var tagIndex in row.data.tags) {
-                            var tag = row.data.tags[tagIndex];
-                            if (!tag || !tag['label'] || !tag['content']) {
-                                continue;
-                            }
-                            if (tag['label'] === 'typedocument') {
-                                row.type = tag['content'];
-                            }
-                            if (tag['label'] === 'typeovertreding') {
-                                row.type = tag['content'];
-                            }
-                        }
-                    }
-                    if (row.data && row.data.stats) {
-                        row.accuracybefore = Math.round(row.data.stats.found / row.data.stats.total * 10000) / 100;
-                    }
-                    if (row.feedback && row.feedback.stats) {
-                        row.accuracyafter = Math.round(row.feedback.stats.found / row.feedback.stats.total * 10000) / 100;
-                    }
-                    row.reviewed = (row.feedback !== undefined ? '\u2713' : '\u2715');
-                    for (var key in row.data) {
-                        row[key] = row.data[key];
-                        if (row.feedback) {
-                            row[key] += '  -  ' + row.feedback[key];
-                        }
-                    }
-                    if (identity.domain === 'amma') {
-                        identity.baseUrl = 'https://localhost:5023/'
-                    }
-                    var urlReview = 'review';
-                    if (identity.domain === 'bpost') {
-                        urlReview = 'viewer';
-                    }
-                    row.url = '<a target="cf_review" href="' + identity.baseUrl + urlReview + '/' + row.id + '">' + row.id + '</a>';
-                    delete row['data'];
-                }
-                $scope.activities = activity;
+        if (principal['activityFilter'].length) {
+
+            $http.post('/newactivity', {docType: principal['activityFilter']}).success(function(activity){
+                makeActivityTable(activity)
             });
-        });
+            principal['activityFilter'] = [];
+        } else {
+            $http.get('/newactivity').success(function(activity){
+                makeActivityTable(activity)
+            });
+        }
     }
 
     $scope.$watch("activities", function() {
@@ -383,6 +680,12 @@ function activityCtrl($scope, $http, $location, $state, principal) {
             }
             $('#activity-table').footable({
                 "columns": [{
+                    name: 'link',
+                    title: '',
+                    sortable: false,
+                    filterable: false,
+
+                }, {
                     name: 'id',
                     title: 'File name'
                 }, {
@@ -437,7 +740,264 @@ function activityCtrl($scope, $http, $location, $state, principal) {
             });
         });
     });
+
+    function makeActivityTable(activity) {
+        for (var row_index in activity) {
+            var row = activity[row_index];
+            // row.workstation = "iPad";
+            if (row.timings) {
+                row.receivetime = new Date(row.timings.receive);
+                row.starttime = new Date(row.timings.start);
+                row.donetime = new Date(row.timings.done);
+                row.feedbacktime = new Date(row.timings.feedback);
+                row.leadtime = Math.round((row.donetime - row.receivetime) / 1000);
+                row.processingtime = Math.round((row.donetime - row.starttime) / 1000)
+            }
+            if (row.data && row.data.tags) {
+                for (var tagIndex in row.data.tags) {
+                    var tag = row.data.tags[tagIndex];
+                    if (!tag || !tag['label'] || !tag['content']) {
+                        continue;
+                    }
+                    if (tag['label'] === 'typedocument') {
+                        row.type = tag['content'];
+                    }
+                    if (tag['label'] === 'typeovertreding') {
+                        row.type = tag['content'];
+                    }
+                }
+            }
+            if (row.data && row.data.stats) {
+                row.accuracybefore = Math.round(row.data.stats.found / row.data.stats.total * 10000) / 100;
+            }
+            if (row.feedback && row.feedback.stats) {
+                row.accuracyafter = Math.round(row.feedback.stats.found / row.feedback.stats.total * 10000) / 100;
+            }
+            row.reviewed = (row.feedback !== undefined ? '\u2713' : '\u2715');
+            for (var key in row.data) {
+                row[key] = row.data[key];
+                if (row.feedback) {
+                    row[key] += '  -  ' + row.feedback[key];
+                }
+            }
+            if (identity.domain === 'amma') {
+                identity.baseUrl = 'https://localhost:5023/';
+            }
+            var urlReview = 'review';
+            if (identity.domain === 'bpost') {
+                urlReview = 'viewer';
+            }
+            row.url = '<a href="' + identity.baseUrl + urlReview + '/' + row.id + '">' + row.id + '</a>';
+            // row.link = '<a target="cf_review" href="' + identity.baseUrl + urlReview + '/' + row.id + '">' + '<i class="fa fa-link"></i>' + '</a>';
+            row.link = '<a href="' + '#/view/' + urlReview + '/' + row.id + '">' + '<i class="fa fa-link"></i>' + '</a>';
+            delete row['data'];
+        }
+        $scope.activities = activity;
+    }
+
+    function errorActivityTable(err) {
+        console.log(err);
+    }
 }
+
+function autoCtrl($scope, $http, $location, $state, principal) {
+    $scope.daterange = principal.daterange;
+    $scope.autoThreshold = 90;
+    $scope.$watch('daterange', function() {
+        $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10);
+        $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10);
+    }, true);
+
+    $scope.getDocTypes = function() {
+        principal.levels().then(function(levels){
+            $scope.docTypes = levels['doctype'];
+            $scope.fieldTypes = levels['fieldtype'];
+            $scope.rowTypes = levels['rowtype'];
+            $scope.selectedDocType = $scope.selectedDocType? $scope.selectedDocType:'All';
+            $scope.selectedFieldType = $scope.selectedFieldType? $scope.selectedFieldType:$scope.fieldTypes[0];
+            $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:'All';
+        });
+    };
+    $scope.dropdownMenuDocTypeSelected = function(docType) {
+        if (docType != $scope.selectedDocType) {
+            $scope.selectedDocType = docType;
+        }
+    };
+    $scope.dropdownMenuFieldTypeSelected = function(fieldType) {
+        if (fieldType != $scope.selectedFieldType) {
+            $scope.selectedFieldType = fieldType;
+        }
+    };
+    $scope.dropdownMenuRowTypeSelected = function(rowType) {
+        if (docType != $scope.selectedRowType) {
+            $scope.selectedRowType = rowType;
+        }
+    };
+
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        $scope.getTimings();
+    });
+    $scope.getTimings = function() {
+        // $http.get('/timings').success(function(timings) {
+        //     for (var timingIndex in timings) {
+        //         timings[timingIndex] /= 1000;
+        //     }
+        //     $scope.timings = timings;
+        // });
+        $http.get('/newtimings', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
+            for (var timingIndex in timings) {
+                timings[timingIndex] /= 1000;
+            }
+            $scope.timings = timings;
+        });
+    };
+}
+
+function autoThresholdCtrl($scope, $state, $location, principal, $http) {
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        $scope.getStatistics();
+    });
+    $scope.getStatistics = function() {
+        principal.identity().then(function(identity) {
+            var columns = [];
+            var column = ['statistics'];
+            var documentIds = {};
+            $http.get('/newstatistics', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
+                var _arr = [];
+                var docType_arr = [];
+                for (var i=20; i>=-1; i--) {
+                    docType_arr[20 - i] = []
+                    if (i == 20) {
+                        _arr.push("100%");
+                    } else if (i == -1) {
+                        _arr.push("0%");
+                    } else  {
+                        _arr.push(String(i * 5 + 5) + "~" + String(i * 5) + "%");
+                    }
+                    var num = 0;
+                    for (var j in documentIds) {
+                        var correct_cnt = 0;
+                        var incorrect_cnt = 0;
+                        for (var k in documentIds[j]['annotations']) {
+                            if (documentIds[j]['annotations'][k]['confidence'] >= $scope.autoThreshold) {
+                                correct_cnt ++;
+                            } else {
+                                incorrect_cnt ++;
+                            }
+                        }
+                        var percent = correct_cnt / (correct_cnt + incorrect_cnt) * 100;
+                        if (i == 20) {
+                            if (percent == 100) {
+                                num ++;
+                                docType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else if (i == -1) {
+                            if (percent == 0) {
+                                num ++;
+                                docType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else {
+                            if (percent >= i * 5 && percent < (i + 1) * 5) {
+                                num ++;
+                                docType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        }
+                    }
+                    column.push(num);
+                }
+                columns.push(column);
+                var graph = c3.generate({
+                    bindto: '#autoThreshold-chart',
+                    axis: {
+                        // rotated: true,
+                        x: {
+                            type: 'category',
+                            categories: _arr
+                        }
+                    },
+                    data: {
+                        columns: columns,
+                        type: 'bar',
+                        onclick: function(data) {
+                            principal['activityFilter'] = docType_arr[data['index']];
+                            $location.path('activity');
+                            $scope.$apply();
+                        }
+                    }
+                });
+            });
+        });
+    };
+}
+
+function autoAccuracyCtrl($scope, $location, $state, $http, principal) {
+    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+        getDataForAccuracyFromNewDocument();
+    });
+
+    function getDataForAccuracyFromNewDocument() {
+        $http.get('/autoAccuracy', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
+
+            // debugger;
+            var _arr = [];
+            var groups = ['Correct & Above', 'Incorrect & Above', 'Correct & Below', 'Incorrect & Below'];
+            var columns = [];
+            for (var countIndex in counts) {
+                _arr.push(counts[countIndex]['_id']['label']);
+            }
+            for (var i = 0; i < groups.length; i++) {
+                columns[i] = [];
+                columns[i].push(groups[i]);
+                for (var j = 0; j < _arr.length; j++) {
+                    var emptyValue = true;
+                    for (var countIndex in counts){
+                        if (counts[countIndex]['_id']['label'] === _arr[j] && counts[countIndex]['_id']['correct'] === groups[i]) {
+                            columns[i].push(counts[countIndex]['counts']);
+                            emptyValue = false;
+                            break;
+                        }
+                    }
+                    if (emptyValue) {
+                        columns[i].push(0);
+                    }
+                }
+            }
+            var graph = c3.generate({
+                bindto: '#autoAccuracy-chart',
+                axis: {
+                    rotated: true,
+                    x: {
+                        type: 'category',
+                        categories: _arr
+                    }
+                },
+                data: {
+                    columns: columns,
+                    type: 'bar',
+                    groups: [groups],
+                    order: null,
+                    colors: {
+                        'Correct & Above': 'rgb(44, 160, 44)',
+                        'InCorrect & Above': 'rgb(31, 119, 180)',
+                        'Correct & Below': 'rgb(214, 39, 40)',
+                        'Incorrect & Below': 'rgb(255, 127, 14)'
+                    },
+                    onclick: function(data) {
+                        $location.url('/activity/' + 'IBAN' + '/' + data.id);
+                        $scope.$apply();
+                    }
+                }
+            });
+        });
+    }
+
+    $scope.getAccuracy = function() {
+        principal.identity().then(function(identity) {
+            getDataForAccuracyFromNewDocument();
+        });
+    };
+}
+
 
 /**
  * MainCtrl - controller
@@ -1158,7 +1718,6 @@ function dashboardMap() {
  */
 
 function flotChartCtrl() {
-
     /**
      * Bar Chart Options
      */
@@ -5292,7 +5851,17 @@ angular
     .module('inspinia')
     .controller('LoginCtrl', LoginCtrl)
     .controller('identityCtrl', identityCtrl)
-    .controller('uploadCtrl', uploadCtrl)
     .controller('statsCtrl', statsCtrl)
+    .controller('volumeCtrl', volumeCtrl)
+    .controller('accuracyCtrl', accuracyCtrl)
+    .controller('statisticsCtrl', statisticsCtrl)
+    .controller('awarenessCtrl', awarenessCtrl)
     .controller('activityCtrl', activityCtrl)
+    .controller('uploadCtrl', uploadCtrl)
+    .controller('viewCtrl', viewCtrl)
+    .controller('autoCtrl', autoCtrl)
+    .controller('autoThresholdCtrl', autoThresholdCtrl)
+    .controller('autoAccuracyCtrl', autoAccuracyCtrl)
     .controller('MainCtrl', MainCtrl);
+
+

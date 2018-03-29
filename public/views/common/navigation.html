@@ -16,9 +16,12 @@
             <li ui-sref-active="active" ng-if="identity.domain != 'pom' && identity.domain != 'bpost'">
                 <a ui-sref="upload"><i class="fa fa-cloud-upload"></i> <span class="nav-label">{{ 'Upload' | translate }}</span></a>
             </li>
-            <!-- <li ui-sref-active="active" ng-if="false">
-                <a ui-sref="view"><i class="fa fa-flask"></i> <span class="nav-label">{{ 'View' | translate }}</span></a>
-            </li> -->
+            <li ui-sref-active="active" ng-if="true">
+                <a ui-sref="view" ><i class="fa fa-check-square"></i> <span class="nav-label">{{ 'View' | translate }}</span></a>
+            </li>
+            <li ui-sref-active="active" ng-if="true">
+                <a ui-sref="automation"><i class="fa fa-cogs"></i> <span class="nav-label">{{ 'Automation' | translate }}</span></a>
+            </li>
             <li ui-sref-active="active">
                 <a ui-sref="logins"><span class="nav-label">{{ 'Change user' | translate }}</span></a>
             </li>

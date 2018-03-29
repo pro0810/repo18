@@ -49,6 +49,13 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
             serie: true,
             name: 'gridshore.c3js.chart',
             files: ['js/plugins/c3/c3-angular.min.js']
+          }, {
+              serie: true,
+              files: ['js/plugins/daterangepicker/daterangepicker.js', 'css/plugins/daterangepicker/daterangepicker-bs3.css']
+          }, {
+              name: 'daterangepicker',
+              files: ['js/plugins/daterangepicker/angular-daterangepicker.js'],
+              serie: true
           }]);
         }
       }
@@ -100,11 +107,41 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
       }
     })
     .state('view', {
-      url: "/view",
-      templateUrl: "views/view.html",
+      parent: 'site',
+      url: "/view/:viewPath/:viewId",
+      templateUrl: "views/views.html",
       data: {
         pageTitle: 'View'
-      }
+      },
+      controller: 'viewCtrl'
+    })
+    .state('automation', {
+        parent: 'site',
+        url: "/automation",
+        templateUrl: "views/automation.html",
+        data: {
+            pageTitle: 'Automation'
+        },
+        controller: 'autoCtrl',
+        resolve: {
+            loadPlugin: function($ocLazyLoad) {
+                return $ocLazyLoad.load([{
+                    serie: true,
+                    files: ['css/plugins/c3/c3.min.css', 'js/plugins/d3/d3.min.js', 'js/plugins/c3/c3.min.js']
+                }, {
+                    serie: true,
+                    name: 'gridshore.c3js.chart',
+                    files: ['js/plugins/c3/c3-angular.min.js']
+                }, {
+                    serie: true,
+                    files: ['js/plugins/daterangepicker/daterangepicker.js', 'css/plugins/daterangepicker/daterangepicker-bs3.css']
+                }, {
+                    name: 'daterangepicker',
+                    files: ['js/plugins/daterangepicker/angular-daterangepicker.js'],
+                    serie: true
+                }]);
+            }
+        }
     })
     .state('logins', {
       parent: 'site',
@@ -1656,9 +1693,14 @@ angular.module('inspinia')
   .factory('principal', ['$q', '$http', '$timeout',
     function($q, $http, $timeout) {
       var _identity = undefined,
-        _authenticated = false;
+        _authenticated = false,
+        _levels = undefined;
 
       return {
+        activityFilter: [],
+        currentViewUrl: '',
+        daterange: {data: {startDate: moment().subtract(30, "days"),
+            endDate: moment()}},
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
         },
@@ -1705,18 +1747,14 @@ angular.module('inspinia')
         },
         identity: function(force) {
           var deferred = $q.defer();
-
           if (force === true) {
             _identity = undefined;
           }
-
           // check and see if we have retrieved the identity data from the server. if we have, reuse it by immediately resolving
           if (angular.isDefined(_identity)) {
             deferred.resolve(_identity);
-
             return deferred.promise;
           }
-
           // otherwise, retrieve the identity data from the server, update the identity object, and then resolve.
           $http.get('login', {
               ignoreErrors: true
@@ -1739,7 +1777,42 @@ angular.module('inspinia')
             });
 
           return deferred.promise;
-        }
+        },
+        levels: function(force) {
+            var deferred = $q.defer();
+            if (force === true) {
+                _levels = undefined;
+            }
+            if (angular.isDefined(_levels)) {
+                deferred.resolve(_levels);
+                return deferred.promise;
+            }
+            var fieldPromise = $http.get('/getfields'),
+                docPromise = $http.get('/getdocs');
+            $q.all([fieldPromise, docPromise])
+                .then(
+                  function(results){
+                    console.log(results);
+                    _levels = {};
+                    _levels['fieldtype'] = [];
+                    _levels['doctype'] = ['All'];
+                    _levels['rowtype'] = ['All'];
+
+                    for (var i in results[0]['data']) {
+                      _levels['fieldtype'].push(results[0]['data'][i]['label']);
+                    }
+                    for (var i in results[1]['data']) {
+                      _levels['doctype'].push(results[1]['data'][i]['id']);
+                    }
+                    deferred.resolve(_levels);
+                  },
+                  function(errors) {
+                    _levels = undefined;
+                    console.log(errors);
+                    deferred.reject(_levels);
+                  });
+            return deferred.promise;
+        },
       };
     }
   ])
@@ -1780,7 +1853,6 @@ angular.module('inspinia')
       $rootScope.$on('$stateChangeStart', function(event, toState, toStateParams) {
         $rootScope.toState = toState;
         $rootScope.toStateParams = toStateParams;
-
         if (principal.isIdentityResolved()) {
           authorization.authorize();
         }

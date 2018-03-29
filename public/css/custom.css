@@ -1,0 +1,75 @@
+label.control-label {
+}
+
+.filter-group label{
+    float: left;
+    line-height: 34px;
+}
+
+.filter-group div.input-group {
+    width: 160px;
+}
+
+.dropdown-menu {
+    left: 10px;
+    /*min-width: 320px;*/
+}
+
+.dropdown-menu>li>a {
+    text-align: center;
+}
+
+
+.filter-group-header {
+    padding: 15px 0px 9px 0px;
+    margin-bottom: 10px;
+    border: solid black 1px;
+}
+
+.daterangepicker_input i {
+    position: absolute;
+    left: 25px;
+    top: 11px;
+}
+
+.daterangepicker_input > input {
+    padding-left: 30px;
+}
+
+.filter-group-right {
+    height: 392px;
+    border: solid black 1px;
+    padding: 15px;
+    max-width: 16%;
+    float: right;
+}
+
+/*.btn-group span.caret {*/
+    /*float: right;*/
+    /*margin-top: 8px;*/
+/*}*/
+
+.btn-group[uib-dropdown] {
+    padding-left: 10px;
+}
+
+/*.btn-group button[uib-dropdown-toggle] {*/
+    /*width: 320px;*/
+/*}*/
+
+.filter-group-right input.form-control {
+    width: 96px;
+    display: inline;
+    margin: 15px 0px 15px 15px;
+}
+
+.c3-ygrid-line line {
+    stroke: red !important;
+    stroke-width: 2px;
+}
+
+.c3-grid text {
+    fill: red;
+    font-size: 14px;
+}
+

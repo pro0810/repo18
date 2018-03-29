@@ -41,4 +41,4 @@ Document.statics.redactForUser = function(user, cb) {
   }], cb);
 };
 
-module.exports = mongoose.model('Document', Document);
+module.exports = mongoose.model('document', Document);

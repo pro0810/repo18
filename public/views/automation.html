@@ -1,0 +1,71 @@
+<!-- Wrapper -->
+<div id="wrapper">
+
+    <!-- Navigation -->
+    <div ng-include="'views/common/navigation.html'"></div>
+
+    <!-- Page wraper -->
+    <!-- ng-class with current state name give you the ability to extended customization your view -->
+    <div id="page-wrapper" class="gray-bg {{$state.current.name}}">
+
+        <!-- Main view  -->
+
+        <div class="row wrapper border-bottom white-bg page-heading p-sm">
+            <div class="col-sm-6">
+                <span class="lead m-r-sm m-b-none">Automation</span>
+            </div>
+            <div class="col-sm-6 filter-group">
+                <label>Timeframe:</label>
+                <div class="col-sm-4 daterangepicker_input">
+                    <input type="text" date-range-picker class="form-control date-picker" ng-model="daterange.data">
+                    <i class="fa fa-calendar glyphicon glyphicon-calendar"></i>
+                </div>
+                <label>Doctype:</label>
+                <div class="btn-group" uib-dropdown keyboard-nav>
+                    <button class="btn btn-default " type="button" id="dropdownMenuDocType" uib-dropdown-toggle>{{selectedDocType}}
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="dropdownMenuDocType1" ng-init="getDocTypes()">
+                        <li role="menuitem" ng-repeat="a in docTypes"><a ng-click="dropdownMenuDocTypeSelected(a)">{{a}}</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="wrapper wrapper-content animated fadeInRight">
+            <div ng-controller="autoThresholdCtrl">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="ibox float-e-margins">
+                            <div class="ibox-title">
+                                <h3 class="text-center">Statistics</h3>
+                            </div>
+                            <div class="ibox-content">
+                                <div id='autoThreshold-chart' style='height: 300px;' ng-init='getAutoThreshold()'></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div ng-controller="accuracyCtrl">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="ibox float-e-margins">
+                            <div class="ibox-title">
+                                <h3 class="text-center">Accuracy</h3>
+                            </div>
+                            <div class="ibox-content">
+                                <div id='autoAccuracy-chart' style='height: 300px;' ng-init='getAccuracy()'></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div ng-include="'views/common/footer.html'"></div>
+    </div>
+    <!-- End page wrapper-->
+
+</div>
+<!-- End wrapper -->

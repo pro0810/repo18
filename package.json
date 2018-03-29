@@ -2,23 +2,24 @@
   "name": "MEAN",
   "version": "1.0.0",
   "scripts": {
-    "start": "./node_modules/nodemon/bin/nodemon.js ./bin/www"
+    "start": "nodemon ./bin/www"
   },
   "dependencies": {
-    "nodemon": "",
     "body-parser": "",
-    "cookie-parser": "",
     "connect-mongo": "",
+    "cookie-parser": "",
     "debug": "",
     "ejs": "",
     "express": "",
     "express-session": "",
+    "moment": "^2.21.0",
     "mongoose": "^5.0.0",
     "morgan": "",
-    "serve-favicon": "",
+    "nodemon": "",
     "passport": "",
     "passport-local": "",
     "passport-local-mongoose": "",
-    "request": ""
+    "request": "",
+    "serve-favicon": ""
   }
 }

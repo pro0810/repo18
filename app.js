@@ -17,7 +17,7 @@ mongoose.Promise = require('bluebird');
 function connectToMongo() {
   var credentials;
   try {
-    credentials = require(path.join('/home/suuha/code/Dashboard/credentials.json'))
+    credentials = require(path.join('./credentials.json'))
   } catch (err) {
     console.error('Please create a credentials.json file in your home directory with connection details for MongoDB')
     credentials = {
@@ -59,6 +59,7 @@ app.use(session({
   saveUninitialized: true,
   store: new MongoStore({ mongooseConnection: mongoose.connection })
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -89,6 +90,7 @@ app.use(isAuthenticated());
 
 // routes
 require('./routes/stats.js')(app);
+require('./routes/newstats.js')(app);
 require('./routes/activity.js')(app);
 require('./routes/upload.js')(app);
 
