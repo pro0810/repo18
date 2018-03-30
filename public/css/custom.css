@@ -1,15 +1,3 @@
-label.control-label {
-}
-
-.filter-group label{
-    float: left;
-    line-height: 34px;
-}
-
-.filter-group div.input-group {
-    width: 160px;
-}
-
 .dropdown-menu {
     left: 10px;
     /*min-width: 320px;*/
@@ -19,26 +7,39 @@ label.control-label {
     text-align: center;
 }
 
-
-.filter-group-header {
-    padding: 15px 0px 9px 0px;
-    margin-bottom: 10px;
-    border: solid black 1px;
-}
-
 .daterangepicker_input i {
     position: absolute;
-    left: 25px;
+    left: 20px;
     top: 11px;
 }
 
 .daterangepicker_input > input {
     padding-left: 30px;
+    /*min-width: 215px;*/
+}
+
+.daterangepicker_input > input:focus {
+    border-color: #8c8c8c;
+}
+
+.page-heading {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+}
+
+.page-heading + div {
+    padding-top: 95px;
+}
+
+span.filter-bar {
+    float: left;
 }
 
 .filter-group-right {
     height: 392px;
-    border: solid black 1px;
+    border-top: solid #e7eaec 2px;
     padding: 15px;
     max-width: 16%;
     float: right;
@@ -49,7 +50,7 @@ label.control-label {
     /*margin-top: 8px;*/
 /*}*/
 
-.btn-group[uib-dropdown] {
+.btn-group[uib-dropdown], .btn-group.daterangepicker_input {
     padding-left: 10px;
 }
 

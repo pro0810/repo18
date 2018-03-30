@@ -11,118 +11,49 @@
         <!-- Main view  -->
 
             <div class="row wrapper border-bottom white-bg page-heading p-sm">
-                <div class="col-sm-6">
-                    <span class="lead m-r-sm m-b-none">Statistics</span>
-                </div>
-                <div class="col-sm-6 filter-group">
-                    <label>Timeframe:</label>
-                    <div class="col-sm-4 daterangepicker_input">
-                        <input type="text" date-range-picker class="form-control date-picker" ng-model="daterange.data">
-                        <i class="fa fa-calendar glyphicon glyphicon-calendar"></i>
-                    </div>
+                <span class="lead m-r-sm m-b-none filter-bar">Statistics</span>
+                <div class="col-sm-2">
                     <label>Doctype:</label>
                     <div class="btn-group" uib-dropdown keyboard-nav>
-                        <button class="btn btn-default " type="button" id="dropdownMenuDocType" uib-dropdown-toggle>{{selectedDocType}}
-                            <span class="caret"></span>
+                        <button id="simple-btn-keyboard-nav" type="button" class="btn btn-default" uib-dropdown-toggle>
+                            {{selectedDocType}} <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="dropdownMenuDocType1" ng-init="getDocTypes()">
+                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="simple-btn-keyboard-nav">
                             <li role="menuitem" ng-repeat="a in docTypes"><a ng-click="dropdownMenuDocTypeSelected(a)">{{a}}</a></li>
                         </ul>
                     </div>
                 </div>
-
-                <!--<div class="col-sm-6">-->
-                    <!--<span class="lead m-r-sm m-b-none">Period</span>-->
-                <!--</div>-->
-                <!--<div class="col-sm-6">-->
-                    <!--<div data-toggle="buttons" class="btn-group pull-right">-->
-                        <!--<label class="btn btn-sm btn-white" ng-class="{active: period == 'day'}" ng-click="period = 'day'"> <input type="radio" name="options" ng-model="period" value="day"> Day </label>-->
-                        <!--<label class="btn btn-sm btn-white" ng-class="{active: period == 'week'}" ng-click="period = 'week'"> <input type="radio" name="options" ng-model="period" value="week"> Week </label>-->
-                        <!--<label class="btn btn-sm btn-white" ng-class="{active: period == 'month'}" ng-click="period = 'month'"> <input type="radio" name="options" ng-model="period" value="month"> Month </label>-->
-                    <!--</div>-->
-                <!--</div>-->
+                <div class="col-sm-2">
+                    <label>Rowtype:</label>
+                    <div class="btn-group" uib-dropdown keyboard-nav>
+                        <button id="btn-row-type" type="button" class="btn btn-default" uib-dropdown-toggle>
+                            {{selectedRowType}} <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-row-type">
+                            <li role="menuitem" ng-repeat="a in rowTypes"><a ng-click="dropdownMenuRowTypeSelected(a)">{{a}}</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-sm-2">
+                    <label>Field:</label>
+                    <div class="btn-group" uib-dropdown keyboard-nav>
+                        <button id="btn-field-type" type="button" class="btn btn-default" uib-dropdown-toggle>
+                            {{selectedFieldType}} <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-field-type" ng-init="getDocTypes()">
+                            <li role="menuitem" ng-repeat="a in fieldTypes"><a ng-click="dropdownMenuFieldTypeSelected(a)">{{a}}</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <label>Timeframe:</label>
+                    <div class="btn-group daterangepicker_input">
+                        <input type="text" date-range-picker class="btn-default form-control date-picker pull-right" ng-model="daterange.data" />
+                        <i class="fa fa-calendar glyphicon glyphicon-calendar"></i>
+                    </div>
+                </div>
             </div>
             <div class="wrapper wrapper-content animated fadeInRight">
-                <div ng-controller="awarenessCtrl">
-                    <div>
-                        <div class="white-bg filter-group-header col-md-12">
-                            <div class="col-sm-2">
-                                <label>Field:</label>
-                                <div class="btn-group" uib-dropdown keyboard-nav>
-                                    <button id="btn-field-type" type="button" class="btn btn-default" uib-dropdown-toggle>
-                                        {{selectedFieldType}} <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-field-type">
-                                        <li role="menuitem" ng-repeat="a in fieldTypes"><a ng-click="dropdownMenuFieldTypeSelected(a)">{{a}}</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="col-sm-3">
-                                <label>Doctype:</label>
-                                <div class="btn-group" uib-dropdown keyboard-nav>
-                                    <button id="simple-btn-keyboard-nav" type="button" class="btn btn-default" uib-dropdown-toggle>
-                                        {{selectedDocType}} <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="simple-btn-keyboard-nav">
-                                        <li role="menuitem" ng-repeat="a in docTypes"><a ng-click="dropdownMenuDocTypeSelected(a)">{{a}}</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="col-sm-2">
-                                <label>Rowtype:</label>
-                                <div class="btn-group" uib-dropdown keyboard-nav>
-                                    <button id="btn-row-type" type="button" class="btn btn-default" uib-dropdown-toggle>
-                                        {{selectedRowType}} <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-row-type">
-                                        <li role="menuitem" ng-repeat="a in rowTypes"><a ng-click="dropdownMenuRowTypeSelected(a)">{{a}}</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="col-sm-5 filter-group">
-                                <label>Timefrmae:</label>
-                                <div class="col-sm-5 daterangepicker_input">
-                                    <input type="text" date-range-picker class="form-control date-picker" ng-model="daterange.data">
-                                    <i class="fa fa-calendar glyphicon glyphicon-calendar"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="ibox float-e-margins col-md-10">
-                            <div class="ibox-title">
-                                <h3 class="text-center">Awareness</h3>
-                            </div>
-                            <div class="ibox-content">
-                                <div id='awareness-chart' style='height: 300px;'></div>
-                            </div>
-                        </div>
-                        <div class="col-md-2 white-bg filter-group-right">
-                            <div class="col-sm-12">
-                                <label>Threshold:</label>
-                                <input type="number" class="form-control" min="0" max="100" ng-model="threshold">
-                                <label>%</label>
-                            </div>
-                            <div class="col-sm-12">
-                                <label>Tolerance:</label>
-                                <input type="number" class="form-control" min="0" max="100" ng-model="tolerance">
-                                <label>%</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div ng-controller="statisticsCtrl">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="ibox float-e-margins">
-                                <div class="ibox-title">
-                                    <h3 class="text-center">Statistics</h3>
-                                </div>
-                                <div class="ibox-content">
-                                    <div id='statistics-chart' style='height: 300px;' ng-init='getStatistics()'></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <div class="row" ng-controller="volumeCtrl">
                     <div class="col-lg-12">
                         <div class="ibox float-e-margins">
@@ -163,7 +94,7 @@
                         <div class="col-md-12">
                             <div class="ibox float-e-margins">
                                 <div class="ibox-title">
-                                    <h3 class="text-center">Accuracy</h3>
+                                    <h3 class="text-center">Field Accuracy</h3>
                                 </div>
                                 <div class="ibox-content">
                                     <div id='accuracy-chart' style='height: 300px;' ng-init='getAccuracy()'></div>
@@ -172,6 +103,47 @@
                         </div>
                     </div>
                 </div>
+                <div ng-controller="awarenessCtrl">
+                    <div>
+
+                        <div class="ibox float-e-margins col-md-10">
+                            <div class="ibox-title">
+                                <h3 class="text-center">Field Awareness</h3>
+                            </div>
+                            <div class="ibox-content">
+                                <div id='awareness-chart' style='height: 300px;'></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 white-bg filter-group-right">
+                            <div class="col-sm-12">
+                                <label>Threshold:</label>
+                                <input type="number" class="form-control" min="0" max="100" ng-model="threshold">
+                                <label>%</label>
+                            </div>
+                            <div class="col-sm-12">
+                                <label>Tolerance:</label>
+                                <input type="number" class="form-control" min="0" max="100" ng-model="tolerance">
+                                <label>%</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div ng-controller="statisticsCtrl">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h3 class="text-center">Document Accuracy</h3>
+                                </div>
+                                <div class="ibox-content">
+                                    <div id='statistics-chart' style='height: 300px;' ng-init='getStatistics()'></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
                 <div class="row" ng-init="getTimings()">
                     <div class="col-sm-6">
                         <div class="ibox float-e-margins">

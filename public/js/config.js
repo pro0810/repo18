@@ -81,9 +81,8 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
       controller: 'activityCtrl',
       resolve: {
         loadPlugin: function($ocLazyLoad) {
-          return $ocLazyLoad.load([{
-            files: ['js/plugins/moment/moment.min.js']
-          }, {
+          return $ocLazyLoad.load([
+              {
             files: ['js/plugins/footable/footable.min.js', 'css/plugins/footable/footable.bootstrap.min.css']
           }]);
         }
@@ -1694,13 +1693,21 @@ angular.module('inspinia')
     function($q, $http, $timeout) {
       var _identity = undefined,
         _authenticated = false,
-        _levels = undefined;
+        _levels = undefined,
+          activityFilter = [],
+            currentViewUrl = '',
+            selectedDocType = null,
+            selectedFieldType = null,
+            selectedRowType = null,
+            daterange = {data: {startDate: moment().subtract(60, "days"), endDate: moment()}};
 
       return {
-        activityFilter: [],
-        currentViewUrl: '',
-        daterange: {data: {startDate: moment().subtract(30, "days"),
-            endDate: moment()}},
+        activityFilter: activityFilter,
+        currentViewUrl: currentViewUrl,
+        selectedDocType: selectedDocType,
+        selectedFieldType: selectedFieldType,
+        selectedRowType: selectedRowType,
+        daterange: daterange,
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
         },
@@ -1787,8 +1794,8 @@ angular.module('inspinia')
                 deferred.resolve(_levels);
                 return deferred.promise;
             }
-            var fieldPromise = $http.get('/getfields'),
-                docPromise = $http.get('/getdocs');
+            var fieldPromise = $http.get('/getfields', {params: {"docType": selectedDocType, "sDate": daterange.data.startDate.format().substring(0, 10), "eDate": daterange.data.endDate.format().substring(0, 10)}}),
+                docPromise = $http.get('/getdocs', {params: {"sDate": daterange.data.startDate.format().substring(0, 10), "eDate": daterange.data.endDate.format().substring(0, 10)}});
             $q.all([fieldPromise, docPromise])
                 .then(
                   function(results){
@@ -1801,9 +1808,10 @@ angular.module('inspinia')
                     for (var i in results[0]['data']) {
                       _levels['fieldtype'].push(results[0]['data'][i]['label']);
                     }
-                    for (var i in results[1]['data']) {
-                      _levels['doctype'].push(results[1]['data'][i]['id']);
-                    }
+                    _levels['doctype'] = _levels['doctype'].concat(results[1]['data'][0]['data']);
+                    // for (var i in results[1]['data']) {
+                    //   _levels['doctype'].push();
+                    // }
                     deferred.resolve(_levels);
                   },
                   function(errors) {

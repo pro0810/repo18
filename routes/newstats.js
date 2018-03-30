@@ -26,10 +26,10 @@ function makeInitRules(req) {
 
 function makeInitRulesForPost(req) {
     var rules = [];
-    console.log(req.body.docType);
-    for (var i in req.body.docType) {
+    console.log(req.body.docIds);
+    for (var i in req.body.docIds) {
         rules.push({
-            $eq: ["$id", req.body.docType[i]]
+            $eq: ["$id", req.body.docIds[i]]
         });
     }
     return rules;
@@ -73,7 +73,7 @@ module.exports = function(app) {
   });
 
   app.get('/newaccuracy', function(req, res) {
-      var rules = makeInitRules(req);
+    var rules = makeInitRules(req);
     Document.aggregate([{
       $redact: {
         $cond: {
@@ -105,38 +105,11 @@ module.exports = function(app) {
           else: "$$PRUNE"
         }
       }
-    }, {
-      $group: {
-        _id: {
-          date: {
-            $dateToString: {
-              format: '%Y-%m-%d',
-              date: '$timings.receive'
-            }
-          },
-          subdomain: "$subdomain"
-        },
-        count: {
-          $sum: 1
-        }
-      }
-    }, {
-      $group: {
-        _id: "$_id.subdomain",
-        dates: {
-          $push: {
-            date: "$_id.date",
-            count: "$count"
-          }
-        }
-      }
-    }, {
-      $project: {
-        _id: false,
-        dates: true,
-        subdomain: "$_id"
-      }
-    }]).then(counts => {
+    },
+        {$group: {_id: {date: {$dateToString: {format: '%Y-%m-%d', date: '$timings.receive'}}, subdomain: "$subdomain"}, count: {$sum: 1}, ids: {$push: "$id"}}},
+        {$group: {_id: "$_id.subdomain", dates: {$push: {date: "$_id.date", count: "$count", ids: "$ids"}}}},
+        {$project: {_id: false, dates: true, subdomain: "$_id"}}
+    ]).then(counts => {
       res.status(200).send(counts);
     });
   });
@@ -217,17 +190,12 @@ module.exports = function(app) {
   });
 
   app.get('/getfields', function (req, res){
+      var rules  = makeInitRules(req);
       Document.aggregate([{
           $redact: {
               $cond: {
                   if: {
-                      $and: [{
-                          $gt: ["$timings.receive", new Date(new Date().getTime() - 86400000 * 30 * 12)]
-                      },
-                          // {                $eq: ["$domain", req.user.domain]            },
-                          {
-                              $gt: ["$subdomain", null]
-                          }]
+                      $and: rules
                   },
                   then: "$$KEEP",
                   else: "$$PRUNE"
@@ -244,24 +212,24 @@ module.exports = function(app) {
   });
 
   app.get('/getdocs', function (req, res){
+      var rules  = makeInitRules(req);
         Document.aggregate([{
             $redact: {
                 $cond: {
                     if: {
-                        $and: [{
-                            $gt: ["$timings.receive", new Date(new Date().getTime() - 86400000 * 30 * 12)]
-                        },
-                            // {                $eq: ["$domain", req.user.domain]            },
-                            {
-                                $gt: ["$subdomain", null]
-                            }]
+                        $and: rules,
                     },
                     then: "$$KEEP",
                     else: "$$PRUNE"
                 }
             }
         },
-            {$project: {_id: 0, id: 1}},
+            {$project: {_id: 0, id: true, tags: "$feedback.content.tags"}},
+            {$unwind: "$tags"},
+            {$match: {$or : [{"tags.label" : { $type : "int" }}, {"tags.label" : { $type : "long" }}]}},
+            {$group: {_id: {doctype: "$tags.text"}}},
+            {$group: {_id: '', data: {$push: "$_id.doctype"}}},
+            {$project: {_id: 0, data: true}}
         ]).then(counts => {
             res.status(200).send(counts);
       });

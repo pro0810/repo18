@@ -127,6 +127,7 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
             var _arr = [];
             var groups = ['OK', 'A', 'B'];
             var columns = [];
+            var p_columns = [];
             for (var countIndex in counts) {
                 if (! _arr.includes(counts[countIndex]['_id']['label'])) {
                     _arr.push(counts[countIndex]['_id']['label']);
@@ -134,7 +135,9 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
             }
             for (var i = 0; i < groups.length; i++) {
                 columns[i] = [];
+                p_columns[i] = [];
                 columns[i].push(groups[i]);
+                p_columns[i].push(groups[i]);
                 for (var j = 0; j < _arr.length; j++) {
                     var emptyValue = true;
                     for (var countIndex in counts){
@@ -149,6 +152,18 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
                     }
                 }
             }
+            for (var i = 1; i <= _arr.length; i++) {
+                if (columns[0][i] + columns[1][i] + columns[2][i] == 0) {
+                    p_columns[0].push(0);
+                    p_columns[1].push(0);
+                    p_columns[2].push(0);
+                } else {
+                    p_columns[0].push((columns[0][i] / (columns[0][i] + columns[1][i] + columns[2][i]) * 100).toFixed(2));
+                    p_columns[1].push((columns[1][i] / (columns[0][i] + columns[1][i] + columns[2][i]) * 100).toFixed(2));
+                    p_columns[2].push((columns[2][i] / (columns[0][i] + columns[1][i] + columns[2][i]) * 100).toFixed(2));
+                }
+
+            }
             var graph = c3.generate({
                 bindto: '#accuracy-chart',
                 axis: {
@@ -159,7 +174,7 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
                     }
                 },
                 data: {
-                    columns: columns,
+                    columns: p_columns,
                     type: 'bar',
                     groups: [groups],
                     order: null,
@@ -171,6 +186,16 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
                     onclick: function(data) {
                         $location.url('/activity/' + 'IBAN' + '/' + data.id);
                         $scope.$apply();
+                    }
+                },
+                tooltip: {
+                    format: {
+                        // title: function (d) { return 'Data ' + d; },
+                        value: function (value, ratio, id, index) {
+                            // var format = id === 'data1' ? d3.format(',') : d3.format('$');
+                            return value + '%, ' + columns[groups.indexOf(id)][index + 1];
+                        }
+//            value: d3.format(',') // apply this format to both y and y2
                     }
                 }
             });
@@ -197,7 +222,7 @@ function statisticsCtrl($scope, $state, $location, principal, $http) {
     $scope.getStatistics = function() {
         principal.identity().then(function(identity) {
             var columns = [];
-            var column = ['statistics'];
+            var column = ['% accuracy of document'];
             var documentIds = {};
             $http.get('/newstatistics', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
                 var _arr = [];
@@ -209,7 +234,7 @@ function statisticsCtrl($scope, $state, $location, principal, $http) {
                     } else if (i == -1) {
                         _arr.push("0%");
                     } else  {
-                        _arr.push(String(i * 5 + 5) + "~" + String(i * 5) + "%");
+                        _arr.push(String(i * 5 + 5) + "-" + String(i * 5));
                     }
                     var num = 0;
                     for (var j in documentIds) {
@@ -421,10 +446,10 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
 
 function viewCtrl($scope, $sce, $state, $location, principal) {
     if ($state.params.viewPath) {
-        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://52.157.179.171:5023/" + $state.params.viewPath + "/" + $state.params.viewId);
+        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://localhost:5023/" + $state.params.viewPath + "/" + $state.params.viewId);
         principal.currentViewUrl = $state.params.viewPath + "/" + $state.params.viewId;
     } else {
-        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://52.157.179.171:5023/" + principal.currentViewUrl);
+        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://localhost:5023/" + principal.currentViewUrl);
         $location.path("view/" + principal.currentViewUrl);
     }
     console.log($scope.currentViewUrl);
@@ -436,7 +461,7 @@ function uploadCtrl($scope, $http, $location, $state, FileUploader) {
     });
 }
 
-function volumeCtrl($scope, $http) {
+function volumeCtrl($scope, $http, $location, principal) {
     $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
         $scope.getVolumes();
         $scope.getStats();
@@ -461,7 +486,7 @@ function volumeCtrl($scope, $http) {
                 xValues[d] = counter;
                 counter++;
             });
-
+            var docIds = {};
             var columns = [];
             var xColumn = Object.keys(xValues);
             volumes.forEach(function(c) {
@@ -469,8 +494,10 @@ function volumeCtrl($scope, $http) {
                     column[i++] = 0;
                 }
                 column[0] = c['subdomain'];
+                docIds[c['subdomain']] = [];
                 c['dates'].forEach(function(d) {
                     column[xValues[d['date']] + 1] = d['count'];
+                    docIds[c['subdomain']][xValues[d['date']]] = d['ids'];
                 });
                 columns.push(column);
             });
@@ -479,6 +506,11 @@ function volumeCtrl($scope, $http) {
                 bindto: '#chart-volume',
                 data: {
                     columns: columns,
+                    onclick: function(data) {
+                        principal['activityFilter'] = docIds[data['id']][data['index']];
+                        $location.path('activity');
+                        $scope.$apply();
+                    }
                 },
                 axis: {
                     x: {
@@ -511,7 +543,19 @@ function statsCtrl($scope, $http, $location, $state, principal) {
     $scope.timings = null;
     $scope.accuracyItems = [];
     $scope.stats = {};
+    $scope.opts = {
+        ranges: {
+            'Today': [moment(), moment()],
+            'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+            'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+            'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+            'This Month': [moment().startOf('month'), moment().endOf('month')],
+            'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+        }
+    };
+
     $scope.daterange = principal.daterange;
+
     $scope.$watch('daterange', function() {
         $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10);
         $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10);
@@ -522,24 +566,30 @@ function statsCtrl($scope, $http, $location, $state, principal) {
             $scope.docTypes = levels['doctype'];
             $scope.fieldTypes = levels['fieldtype'];
             $scope.rowTypes = levels['rowtype'];
-            $scope.selectedDocType = $scope.selectedDocType? $scope.selectedDocType:'All';
-            $scope.selectedFieldType = $scope.selectedFieldType? $scope.selectedFieldType:$scope.fieldTypes[0];
-            $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:'All';
+            $scope.selectedDocType = principal.selectedDocType? principal.selectedDocType:'All';
+            $scope.selectedFieldType = principal.selectedFieldType? principal.selectedFieldType:$scope.fieldTypes[0];
+            if (principal.selectedFieldType == null) {
+                principal.selectedFieldType = $scope.selectedFieldType;
+            }
+            $scope.selectedRowType = principal.selectedRowType? principal.selectedRowType:'All';
         });
     };
     $scope.dropdownMenuDocTypeSelected = function(docType) {
         if (docType != $scope.selectedDocType) {
             $scope.selectedDocType = docType;
+            principal.selectedDocType = docType;
         }
     };
     $scope.dropdownMenuFieldTypeSelected = function(fieldType) {
         if (fieldType != $scope.selectedFieldType) {
             $scope.selectedFieldType = fieldType;
+            principal.selectedFieldType = fieldType;
         }
     };
     $scope.dropdownMenuRowTypeSelected = function(rowType) {
         if (docType != $scope.selectedRowType) {
             $scope.selectedRowType = rowType;
+            principal.selectedRowType = rowType;
         }
     };
 
@@ -570,7 +620,7 @@ function activityCtrl($scope, $http, $location, $state, principal) {
     $scope.getActivity = function() {
         if (principal['activityFilter'].length) {
 
-            $http.post('/newactivity', {docType: principal['activityFilter']}).success(function(activity){
+            $http.post('/newactivity', {docIds: principal['activityFilter']}).success(function(activity){
                 makeActivityTable(activity)
             });
             principal['activityFilter'] = [];
