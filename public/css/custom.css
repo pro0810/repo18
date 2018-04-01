@@ -74,3 +74,7 @@ span.filter-bar {
     font-size: 14px;
 }
 
+.nav-docids button {
+    min-width: 162px;
+    margin-right: 60px;
+}

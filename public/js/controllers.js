@@ -321,7 +321,7 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
         }
         var tolerance;
         if ($scope.column_B.length > 0) {
-            tolerance = (tolerance_cnt / $scope.column_B.length * 100).toFixed(2);
+            tolerance = parseFloat((tolerance_cnt / $scope.column_B.length * 100).toFixed(2));
         } else {
             tolerance = 0;
         }
@@ -389,7 +389,10 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
                     cnt = 0;
 
                 for (var i in data) {
-                    if (data[i]['annotations']['correct'] === 'B' && data[i]['annotations']['confidence'] != null) {
+                    if (data[i]['annotations']['correct'] === 'B') {
+                        if (data[i]['annotations']['confidence'] == null) {
+                            data[i]['annotations']['confidence'] = 0;
+                        }
                         column_B_x.push(parseInt(i) + 1);
                         column_B.push(data[i]['annotations']['confidence']);
                         docType_arr[cnt] = data[i]['id'];
@@ -431,10 +434,10 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
                         r: 4
                     }
                 });
-                if ($scope.threshold != undefined) {
-                    changedTolerance = true;
-                    changedThreshold = true;
-                }
+                // if ($scope.threshold != undefined) {
+                //     changedTolerance = true;
+                //     changedThreshold = true;
+                // }
                 $scope.threshold = 100;
                 $scope.tolerance = 0;
                 // updateThresholdLine();
@@ -445,13 +448,43 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
 }
 
 function viewCtrl($scope, $sce, $state, $location, principal) {
+    var prefixUrl = "http://localhost:5023/";
     if ($state.params.viewPath) {
-        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://localhost:5023/" + $state.params.viewPath + "/" + $state.params.viewId);
+        $scope.currentViewUrl = $sce.trustAsResourceUrl(prefixUrl + $state.params.viewPath + "/" + $state.params.viewId);
         principal.currentViewUrl = $state.params.viewPath + "/" + $state.params.viewId;
     } else {
-        $scope.currentViewUrl = $sce.trustAsResourceUrl("http://localhost:5023/" + principal.currentViewUrl);
+        $scope.currentViewUrl = $sce.trustAsResourceUrl(prefixUrl + principal.currentViewUrl);
         $location.path("view/" + principal.currentViewUrl);
     }
+    if (principal.currentViewUrl) {
+        principal.levels().then(function(levels){
+            var viewPath = principal.currentViewUrl.substr(0, principal.currentViewUrl.indexOf('/')),
+                viewId = principal.currentViewUrl.substr(principal.currentViewUrl.indexOf('/') + 1);
+            $scope.nextViewUrl = '#';
+            $scope.prevViewUrl = '#';
+            $scope.nextViewDisabled = true;
+            $scope.prevViewDisabled = true;
+            if (levels['docid'] && levels['docid'].indexOf(viewId) != -1) {
+                if (levels['docid'][levels['docid'].indexOf(viewId) + 1]) {
+                    $scope.nextViewUrl = "view/" + viewPath + "/" + levels['docid'][levels['docid'].indexOf(viewId) + 1];
+                    $scope.nextViewDisabled = false;
+                }
+                if (levels['docid'][levels['docid'].indexOf(viewId) - 1]) {
+                    $scope.prevViewUrl = "view/" +  viewPath + "/" + levels['docid'][levels['docid'].indexOf(viewId) - 1];
+                    $scope.prevViewDisabled = false;
+                }
+            }
+        });
+    }
+
+    $scope.prevDoc = function() {
+        $location.path($scope.prevViewUrl);
+    }
+
+    $scope.nextDoc = function() {
+        $location.path($scope.nextViewUrl);
+    }
+
     console.log($scope.currentViewUrl);
 }
 
@@ -557,8 +590,9 @@ function statsCtrl($scope, $http, $location, $state, principal) {
     $scope.daterange = principal.daterange;
 
     $scope.$watch('daterange', function() {
-        $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10);
-        $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10);
+        $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z";
+        $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z";
+        $scope.getTimings();
     }, true);
 
     $scope.getDocTypes = function() {
@@ -593,9 +627,6 @@ function statsCtrl($scope, $http, $location, $state, principal) {
         }
     };
 
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
-        $scope.getTimings();
-    });
     $scope.getTimings = function() {
         // $http.get('/timings').success(function(timings) {
         //     for (var timingIndex in timings) {
@@ -603,7 +634,7 @@ function statsCtrl($scope, $http, $location, $state, principal) {
         //     }
         //     $scope.timings = timings;
         // });
-        $http.get('/newtimings', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
+        $http.get('/newtimings', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
             for (var timingIndex in timings) {
                 timings[timingIndex] /= 1000;
             }
@@ -788,6 +819,7 @@ function activityCtrl($scope, $http, $location, $state, principal) {
                 }],
                 "rows": $scope.activities
             });
+
         });
     });
 
@@ -5116,8 +5148,6 @@ function selectCtrl($scope) {
 
 }
 
-
-
 function toastrCtrl($scope, toaster) {
 
     $scope.demo1 = function() {
@@ -5305,7 +5335,6 @@ function loadingCtrl($scope, $timeout) {
 
 
 }
-
 
 function datatablesCtrl($scope, DTOptionsBuilder) {
 

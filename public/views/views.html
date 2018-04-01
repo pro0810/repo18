@@ -8,8 +8,18 @@
     <!-- ng-class with current state name give you the ability to extended customization your view -->
     <div id="page-wrapper" class="gray-bg {{$state.current.name}}">
         <div class="row wrapper border-bottom white-bg page-heading p-sm">
-            <div class="col-sm-6">
-                <span class="lead m-r-sm m-b-none">View</span>
+            <div class="col-sm-12">
+                <div class="col-md-4">
+                    <span class="lead m-r-sm m-b-none">View</span>
+                </div>
+
+                <div class="col-md-4 nav-docids">
+                    <button class="btn btn-default" ng-disabled="prevViewDisabled" ng-click="prevDoc()">&#8249; Previous Document</button>
+                    <button class="btn btn-default" ng-disabled="nextViewDisabled" ng-click="nextDoc()">Next Document &#8250;</button>
+                </div>
+
+
+
             </div>
         </div>
         <div class="wrapper wrapper-content animated fadeInRight">

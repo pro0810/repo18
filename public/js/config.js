@@ -1794,9 +1794,11 @@ angular.module('inspinia')
                 deferred.resolve(_levels);
                 return deferred.promise;
             }
-            var fieldPromise = $http.get('/getfields', {params: {"docType": selectedDocType, "sDate": daterange.data.startDate.format().substring(0, 10), "eDate": daterange.data.endDate.format().substring(0, 10)}}),
-                docPromise = $http.get('/getdocs', {params: {"sDate": daterange.data.startDate.format().substring(0, 10), "eDate": daterange.data.endDate.format().substring(0, 10)}});
-            $q.all([fieldPromise, docPromise])
+            var fieldPromise = $http.get('/getfields', {params: {"docType": selectedDocType, "sDate": daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z", "eDate": daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z"}}),
+                docTypesPromise = $http.get('/getdoctypes', {params: {"sDate": daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z", "eDate": daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z"}}),
+                docIdsPromise = $http.get('/getdocids', {params: {"sDate": daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z", "eDate": daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z"}});
+
+            $q.all([fieldPromise, docTypesPromise, docIdsPromise])
                 .then(
                   function(results){
                     console.log(results);
@@ -1809,9 +1811,7 @@ angular.module('inspinia')
                       _levels['fieldtype'].push(results[0]['data'][i]['label']);
                     }
                     _levels['doctype'] = _levels['doctype'].concat(results[1]['data'][0]['data']);
-                    // for (var i in results[1]['data']) {
-                    //   _levels['doctype'].push();
-                    // }
+                    _levels['docid'] = results[2]['data'][0]['data'];
                     deferred.resolve(_levels);
                   },
                   function(errors) {
