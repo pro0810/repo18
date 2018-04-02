@@ -6,20 +6,20 @@
 
     <!-- Page wraper -->
     <!-- ng-class with current state name give you the ability to extended customization your view -->
-    <div id="page-wrapper" class="gray-bg {{$state.current.name}}">
+    <div id="page-wrapper" class="gray-bg {{$state.current.name}}"  ng-init="getFilterDatas()">
 
         <!-- Main view  -->
 
             <div class="row wrapper border-bottom white-bg page-heading p-sm">
                 <span class="lead m-r-sm m-b-none filter-bar">Statistics</span>
                 <div class="col-sm-2">
-                    <label>Doctype:</label>
+                    <label>Pagetype:</label>
                     <div class="btn-group" uib-dropdown keyboard-nav>
                         <button id="simple-btn-keyboard-nav" type="button" class="btn btn-default" uib-dropdown-toggle>
-                            {{selectedDocType}} <span class="caret"></span>
+                            {{selectedPageType}} <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="simple-btn-keyboard-nav">
-                            <li role="menuitem" ng-repeat="a in docTypes"><a ng-click="dropdownMenuDocTypeSelected(a)">{{a}}</a></li>
+                            <li role="menuitem" ng-repeat="a in pageTypes"><a ng-click="dropdownMenuPageTypeSelected(a)">{{a}}</a></li>
                         </ul>
                     </div>
                 </div>
@@ -40,7 +40,7 @@
                         <button id="btn-field-type" type="button" class="btn btn-default" uib-dropdown-toggle>
                             {{selectedFieldType}} <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-field-type" ng-init="getDocTypes()">
+                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-field-type">
                             <li role="menuitem" ng-repeat="a in fieldTypes"><a ng-click="dropdownMenuFieldTypeSelected(a)">{{a}}</a></li>
                         </ul>
                     </div>

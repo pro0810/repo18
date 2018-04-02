@@ -116,12 +116,15 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
         }
     }
 
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
         getDataForAccuracyFromNewDocument();
     });
 
     function getDataForAccuracyFromNewDocument() {
-        $http.get('/newaccuracy', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
+        if (! $scope.sDate || ! $scope.selectedPageType) {
+            return;
+        }
+        $http.get('/newaccuracy', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
             console.log(counts);
             // debugger;
             var _arr = [];
@@ -216,19 +219,22 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
 }
 
 function statisticsCtrl($scope, $state, $location, principal, $http) {
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
         $scope.getStatistics();
     });
     $scope.getStatistics = function() {
+        if (! $scope.sDate || ! $scope.selectedPageType) {
+            return;
+        }
         principal.identity().then(function(identity) {
             var columns = [];
             var column = ['% accuracy of document'];
             var documentIds = {};
-            $http.get('/newstatistics', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
+            $http.get('/newstatistics', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
                 var _arr = [];
-                var docType_arr = [];
+                var pageType_arr = [];
                 for (var i=20; i>=-1; i--) {
-                    docType_arr[20 - i] = []
+                    pageType_arr[20 - i] = []
                     if (i == 20) {
                         _arr.push("100%");
                     } else if (i == -1) {
@@ -251,17 +257,17 @@ function statisticsCtrl($scope, $state, $location, principal, $http) {
                         if (i == 20) {
                             if (percent == 100) {
                                 num ++;
-                                docType_arr[20 - i].push(documentIds[j]['id']);
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
                             }
                         } else if (i == -1) {
                             if (percent == 0) {
                                 num ++;
-                                docType_arr[20 - i].push(documentIds[j]['id']);
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
                             }
                         } else {
                             if (percent >= i * 5 && percent < (i + 1) * 5) {
                                 num ++;
-                                docType_arr[20 - i].push(documentIds[j]['id']);
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
                             }
                         }
                     }
@@ -281,7 +287,7 @@ function statisticsCtrl($scope, $state, $location, principal, $http) {
                         columns: columns,
                         type: 'bar',
                         onclick: function(data) {
-                            principal['activityFilter'] = docType_arr[data['index']];
+                            principal['activityFilter'] = pageType_arr[data['index']];
                             $location.path('activity');
                             $scope.$apply();
                         }
@@ -361,7 +367,7 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
             } else if (tolerance_cnt == 0) {
                 threshold = 100;
             } else {
-                threshold = ($scope.column_B[$scope.column_B.length - tolerance_cnt] + $scope.column_B[$scope.column_B.length - tolerance_cnt - 1]) / 2;
+                threshold = parseFloat((($scope.column_B[$scope.column_B.length - tolerance_cnt] + $scope.column_B[$scope.column_B.length - tolerance_cnt - 1]) / 2).toFixed(2));
             }
             if ($scope.threshold != threshold) {
                 changedThreshold = true;
@@ -374,18 +380,21 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
         console.log($scope.tolerance);
     });
 
-    $scope.$watchGroup(['selectedFieldType', 'selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['selectedFieldType', 'selectedPageType', 'sDate', 'eDate'], function() {
         $scope.getAwareness();
     });
 
     $scope.getAwareness = function() {
-        principal.levels().then(function(levels) {
+        // principal.levels().then(function(levels) {
+        if (! $scope.sDate || ! $scope.selectedFieldType) {
+            return;
+        }
             var column_OK = ['OK'],
              column_B = ['B'],
              column_OK_x = ['OK_x'],
              column_B_x = ['B_x'];
-            $http.get('/newawareness', {params: {"fieldType": $scope.selectedFieldType, "docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(data) {
-                var docType_arr = [],
+            $http.get('/newawareness', {params: {"fieldType": $scope.selectedFieldType, "pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(data) {
+                var pageType_arr = [],
                     cnt = 0;
 
                 for (var i in data) {
@@ -395,12 +404,12 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
                         }
                         column_B_x.push(parseInt(i) + 1);
                         column_B.push(data[i]['annotations']['confidence']);
-                        docType_arr[cnt] = data[i]['id'];
+                        pageType_arr[cnt] = data[i]['id'];
                         cnt ++;
                     } else if (data[i]['annotations']['correct'] == 'OK') {
                         column_OK_x.push(parseInt(i) + 1);
                         column_OK.push(data[i]['annotations']['confidence']);
-                        docType_arr[cnt] = data[i]['id'];
+                        pageType_arr[cnt] = data[i]['id'];
                         cnt ++;
                     }
                 }
@@ -421,7 +430,7 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
                         columns: columns,
                         type: 'scatter',
                         onclick: function(data) {
-                            $location.path("view/review/" + docType_arr[data['index']]);
+                            $location.path("view/review/" + pageType_arr[data['index']]);
                             $scope.$apply();
                         }
                     },
@@ -442,7 +451,7 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
                 $scope.tolerance = 0;
                 // updateThresholdLine();
             });
-        });
+        // });
     };
 
 }
@@ -495,17 +504,20 @@ function uploadCtrl($scope, $http, $location, $state, FileUploader) {
 }
 
 function volumeCtrl($scope, $http, $location, principal) {
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['sDate', 'eDate'], function() {
         $scope.getVolumes();
         $scope.getStats();
     });
     $scope.getVolumes = function() {
-        console.log('getting volumes')
+        console.log('getting volumes');
         // $http.get('/volumes').success(function(counts) {
         //     console.log(counts)
         //     $scope.volumes = counts;
         // });
-        $http.get('/newvolumes', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(volumes) {
+        if (! $scope.sDate) {
+            return;
+        }
+        $http.get('/newvolumes', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(volumes) {
             console.log(volumes);
             var dates = new Set();
             volumes.forEach(function(c) {
@@ -564,7 +576,10 @@ function volumeCtrl($scope, $http, $location, principal) {
         //     $scope.stats['before'] = avg.data;
         //     $scope.stats['after'] = avg.feedback;
         // });
-        $http.get('/newstats', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(avg) {
+        if (! $scope.sDate) {
+            return;
+        }
+        $http.get('/newstats', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(avg) {
             $scope.stats['before'] = avg.data;
             $scope.stats['after'] = avg.feedback;
         });
@@ -586,32 +601,53 @@ function statsCtrl($scope, $http, $location, $state, principal) {
             'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
         }
     };
-
-    $scope.daterange = principal.daterange;
+    if (principal.daterange) {
+        $scope.daterange = principal.daterange;
+        var first_loaded = true;
+    }
 
     $scope.$watch('daterange', function() {
         $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z";
         $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z";
-        $scope.getTimings();
+        $scope.selectedPageType = null;
+        $scope.selectedFieldType = null;
+        $scope.selectedRowType = null;
+        if (first_loaded) {
+            first_loaded = false;
+            $scope.getFilterDatas();
+        } else {
+            principal.selectedPageType = null;
+            principal.selectedFieldType = null;
+            principal.selectedRowType = null;
+            $scope.getFilterDatas(true);
+        }
     }, true);
 
-    $scope.getDocTypes = function() {
-        principal.levels().then(function(levels){
-            $scope.docTypes = levels['doctype'];
+    $scope.getFilterDatas = function(enforce, pageType) {
+        if (! $scope.sDate) {
+            return;
+        }
+        principal.levels(enforce, pageType).then(function(levels){
+            $scope.pageTypes = levels['pagetype'];
             $scope.fieldTypes = levels['fieldtype'];
             $scope.rowTypes = levels['rowtype'];
-            $scope.selectedDocType = principal.selectedDocType? principal.selectedDocType:'All';
+            $scope.selectedPageType = principal.selectedPageType? principal.selectedPageType:$scope.pageTypes[0];
+            principal.selectedPageType = $scope.selectedPageType;
             $scope.selectedFieldType = principal.selectedFieldType? principal.selectedFieldType:$scope.fieldTypes[0];
-            if (principal.selectedFieldType == null) {
-                principal.selectedFieldType = $scope.selectedFieldType;
-            }
-            $scope.selectedRowType = principal.selectedRowType? principal.selectedRowType:'All';
+            principal.selectedFieldType = $scope.selectedFieldType;
+            $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:$scope.rowTypes[0];
+            principal.selectedRowType = $scope.selectedRowType;
+            $scope.getTimings();
         });
     };
-    $scope.dropdownMenuDocTypeSelected = function(docType) {
-        if (docType != $scope.selectedDocType) {
-            $scope.selectedDocType = docType;
-            principal.selectedDocType = docType;
+    $scope.dropdownMenuPageTypeSelected = function(pageType) {
+        if (pageType != $scope.selectedPageType) {
+            $scope.selectedPageType = pageType;
+            principal.selectedPageType = pageType;
+            // principal.selectedPageType = null;
+            principal.selectedFieldType = null;
+            principal.selectedRowType = null;
+            $scope.getFilterDatas(true, pageType);
         }
     };
     $scope.dropdownMenuFieldTypeSelected = function(fieldType) {
@@ -621,7 +657,7 @@ function statsCtrl($scope, $http, $location, $state, principal) {
         }
     };
     $scope.dropdownMenuRowTypeSelected = function(rowType) {
-        if (docType != $scope.selectedRowType) {
+        if (pageType != $scope.selectedRowType) {
             $scope.selectedRowType = rowType;
             principal.selectedRowType = rowType;
         }
@@ -634,6 +670,9 @@ function statsCtrl($scope, $http, $location, $state, principal) {
         //     }
         //     $scope.timings = timings;
         // });
+        if (! $scope.sDate) {
+            return;
+        }
         $http.get('/newtimings', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
             for (var timingIndex in timings) {
                 timings[timingIndex] /= 1000;
@@ -649,10 +688,9 @@ function activityCtrl($scope, $http, $location, $state, principal) {
     $scope.activities = null;
     $scope.doneLoading = false;
     $scope.getActivity = function() {
-        if (principal['activityFilter'].length) {
-
+        if (principal['activityFilter'] && principal['activityFilter'].length) {
             $http.post('/newactivity', {docIds: principal['activityFilter']}).success(function(activity){
-                makeActivityTable(activity)
+                makeActivityTable(activity);
             });
             principal['activityFilter'] = [];
         } else {
@@ -890,19 +928,19 @@ function autoCtrl($scope, $http, $location, $state, principal) {
         $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10);
     }, true);
 
-    $scope.getDocTypes = function() {
+    $scope.getPageTypes = function() {
         principal.levels().then(function(levels){
-            $scope.docTypes = levels['doctype'];
+            $scope.pageTypes = levels['pagetype'];
             $scope.fieldTypes = levels['fieldtype'];
             $scope.rowTypes = levels['rowtype'];
-            $scope.selectedDocType = $scope.selectedDocType? $scope.selectedDocType:'All';
+            $scope.selectedPageType = $scope.selectedPageType? $scope.selectedPageType:'All';
             $scope.selectedFieldType = $scope.selectedFieldType? $scope.selectedFieldType:$scope.fieldTypes[0];
             $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:'All';
         });
     };
-    $scope.dropdownMenuDocTypeSelected = function(docType) {
-        if (docType != $scope.selectedDocType) {
-            $scope.selectedDocType = docType;
+    $scope.dropdownMenuPageTypeSelected = function(pageType) {
+        if (pageType != $scope.selectedPageType) {
+            $scope.selectedPageType = pageType;
         }
     };
     $scope.dropdownMenuFieldTypeSelected = function(fieldType) {
@@ -911,12 +949,12 @@ function autoCtrl($scope, $http, $location, $state, principal) {
         }
     };
     $scope.dropdownMenuRowTypeSelected = function(rowType) {
-        if (docType != $scope.selectedRowType) {
+        if (pageType != $scope.selectedRowType) {
             $scope.selectedRowType = rowType;
         }
     };
 
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
         $scope.getTimings();
     });
     $scope.getTimings = function() {
@@ -926,7 +964,7 @@ function autoCtrl($scope, $http, $location, $state, principal) {
         //     }
         //     $scope.timings = timings;
         // });
-        $http.get('/newtimings', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
+        $http.get('/newtimings', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
             for (var timingIndex in timings) {
                 timings[timingIndex] /= 1000;
             }
@@ -936,7 +974,7 @@ function autoCtrl($scope, $http, $location, $state, principal) {
 }
 
 function autoThresholdCtrl($scope, $state, $location, principal, $http) {
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
         $scope.getStatistics();
     });
     $scope.getStatistics = function() {
@@ -944,11 +982,11 @@ function autoThresholdCtrl($scope, $state, $location, principal, $http) {
             var columns = [];
             var column = ['statistics'];
             var documentIds = {};
-            $http.get('/newstatistics', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
+            $http.get('/newstatistics', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
                 var _arr = [];
-                var docType_arr = [];
+                var pageType_arr = [];
                 for (var i=20; i>=-1; i--) {
-                    docType_arr[20 - i] = []
+                    pageType_arr[20 - i] = []
                     if (i == 20) {
                         _arr.push("100%");
                     } else if (i == -1) {
@@ -971,17 +1009,17 @@ function autoThresholdCtrl($scope, $state, $location, principal, $http) {
                         if (i == 20) {
                             if (percent == 100) {
                                 num ++;
-                                docType_arr[20 - i].push(documentIds[j]['id']);
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
                             }
                         } else if (i == -1) {
                             if (percent == 0) {
                                 num ++;
-                                docType_arr[20 - i].push(documentIds[j]['id']);
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
                             }
                         } else {
                             if (percent >= i * 5 && percent < (i + 1) * 5) {
                                 num ++;
-                                docType_arr[20 - i].push(documentIds[j]['id']);
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
                             }
                         }
                     }
@@ -1001,7 +1039,7 @@ function autoThresholdCtrl($scope, $state, $location, principal, $http) {
                         columns: columns,
                         type: 'bar',
                         onclick: function(data) {
-                            principal['activityFilter'] = docType_arr[data['index']];
+                            principal['activityFilter'] = pageType_arr[data['index']];
                             $location.path('activity');
                             $scope.$apply();
                         }
@@ -1013,12 +1051,12 @@ function autoThresholdCtrl($scope, $state, $location, principal, $http) {
 }
 
 function autoAccuracyCtrl($scope, $location, $state, $http, principal) {
-    $scope.$watchGroup(['selectedDocType', 'sDate', 'eDate'], function() {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
         getDataForAccuracyFromNewDocument();
     });
 
     function getDataForAccuracyFromNewDocument() {
-        $http.get('/autoAccuracy', {params: {"docType": $scope.selectedDocType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
+        $http.get('/autoAccuracy', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
 
             // debugger;
             var _arr = [];

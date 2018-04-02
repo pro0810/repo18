@@ -1694,19 +1694,9 @@ angular.module('inspinia')
       var _identity = undefined,
         _authenticated = false,
         _levels = undefined,
-          activityFilter = [],
-            currentViewUrl = '',
-            selectedDocType = null,
-            selectedFieldType = null,
-            selectedRowType = null,
-            daterange = {data: {startDate: moment().subtract(60, "days"), endDate: moment()}};
+        daterange = {data: {startDate: moment().subtract(60, "days"), endDate: moment()}};
 
       return {
-        activityFilter: activityFilter,
-        currentViewUrl: currentViewUrl,
-        selectedDocType: selectedDocType,
-        selectedFieldType: selectedFieldType,
-        selectedRowType: selectedRowType,
         daterange: daterange,
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
@@ -1785,7 +1775,7 @@ angular.module('inspinia')
 
           return deferred.promise;
         },
-        levels: function(force) {
+        levels: function(force, selectedPageType) {
             var deferred = $q.defer();
             if (force === true) {
                 _levels = undefined;
@@ -1794,24 +1784,33 @@ angular.module('inspinia')
                 deferred.resolve(_levels);
                 return deferred.promise;
             }
-            var fieldPromise = $http.get('/getfields', {params: {"docType": selectedDocType, "sDate": daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z", "eDate": daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z"}}),
-                docTypesPromise = $http.get('/getdoctypes', {params: {"sDate": daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z", "eDate": daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z"}}),
-                docIdsPromise = $http.get('/getdocids', {params: {"sDate": daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z", "eDate": daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z"}});
+            var sDate =  daterange.data.startDate.format().substring(0, 10) + "T00:00:00Z",
+                eDate  = daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z",
+                fieldPromise = $http.get('/getfields', {params: {"pageType": selectedPageType, "sDate": sDate, "eDate": eDate}}),
+                pageTypesPromise = $http.get('/getpagetypes', {params: {"sDate": sDate, "eDate": eDate}}),
+                docIdsPromise = $http.get('/getdocids');
 
-            $q.all([fieldPromise, docTypesPromise, docIdsPromise])
+            $q.all([fieldPromise, pageTypesPromise, docIdsPromise])
                 .then(
                   function(results){
                     console.log(results);
                     _levels = {};
                     _levels['fieldtype'] = [];
-                    _levels['doctype'] = ['All'];
+                    _levels['pagetype'] = ['All'];
                     _levels['rowtype'] = ['All'];
-
+                    _levels['docid'] = [];
                     for (var i in results[0]['data']) {
                       _levels['fieldtype'].push(results[0]['data'][i]['label']);
                     }
-                    _levels['doctype'] = _levels['doctype'].concat(results[1]['data'][0]['data']);
-                    _levels['docid'] = results[2]['data'][0]['data'];
+                    if (results[1]['data'][0]) {
+                        for (var i in results[1]['data'][0]['data']) {
+                            _levels['pagetype'].push(results[1]['data'][0]['data'][i]);
+                        }
+                        // _levels['pagetype'] = _levels['pagetype'].concat(results[1]['data'][0]['data']);
+                    }
+                    if (results[2]['data'][0]) {
+                       _levels['docid'] = results[2]['data'][0]['data'];
+                    }
                     deferred.resolve(_levels);
                   },
                   function(errors) {
