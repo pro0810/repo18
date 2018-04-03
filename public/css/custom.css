@@ -78,3 +78,44 @@ span.filter-bar {
     min-width: 162px;
     margin-right: 60px;
 }
+
+.irs-slider {
+    width: 15px !important;
+    background: transparent !important;
+    border: 0px !important;
+    box-shadow: none !important;
+}
+
+.irs-single {
+    top: 28px !important;
+}
+
+.slider-container {
+    width: calc((100% - 85px) * 10 /11);
+    margin-left: 150px;
+}
+
+.slider-title {
+    float: left;
+    padding-top: 60px;
+    padding-right: 5px;
+    width: 150px;
+    text-align: right;
+}
+
+.slider-header-title {
+    float: left;
+    padding-top: 28px;
+    padding-right: 5px;
+    width: 150px;
+    text-align: right;
+}
+
+/*.ibox-content > div:last-child > div > div {*/
+    /*height: 70px !important;*/
+/*}*/
+
+
+/*.irs {*/
+    /*left: 30px !important;*/
+/*}*/

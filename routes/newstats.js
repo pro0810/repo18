@@ -232,25 +232,15 @@ module.exports = function(app) {
         });
     });
 
-    app.get('/autoAccuracy', function (req, res) {
-      var rules = makeInitRules(req);
-      Document.aggregate([{
-          $redact: {
-              $cond: {
-                  if: {
-                      $and: rules,
-                  },
-                  then: "$$KEEP",
-                  else: "$$PRUNE"
-              }
-          }
-      },
-          {$project: {annotations: "$feedback.annotations", _id: 0}},
-          {$unwind: "$annotations"},
-          {$group: {_id: {label: "$annotations.label"}, accuracy: {$push: {correct: "$annotations.correct", confidence: "$annotations.confidence"}}}}
-      ]).then(function(counts) {
-          res.status(200).send(counts);
+    app.get('/autoField', function (req, res) {
+        var rules = makeInitRules(req);
+        rules.push(
+            {$project: {annotations: "$feedback.annotations", _id: 0}},
+            {$unwind: "$annotations"},
+            {$group: {_id: {label: "$annotations.label"}, accuracy: {$push: {correct: "$annotations.correct", confidence: "$annotations.confidence"}}}}
+        );
+        Document.aggregate(rules).then(function(counts) {
+            res.status(200).send(counts);
+        });
     });
-    });
-
 };

@@ -6,13 +6,11 @@
 
     <!-- Page wraper -->
     <!-- ng-class with current state name give you the ability to extended customization your view -->
-    <div id="page-wrapper" class="gray-bg {{$state.current.name}}"  ng-init="getFilterDatas()">
-
+    <div id="page-wrapper" class="gray-bg {{$state.current.name}}">
         <!-- Main view  -->
-
             <div class="row wrapper border-bottom white-bg page-heading p-sm">
                 <span class="lead m-r-sm m-b-none filter-bar">Statistics</span>
-                <div class="col-sm-2">
+                <div class="col-sm-3">
                     <label>Pagetype:</label>
                     <div class="btn-group" uib-dropdown keyboard-nav>
                         <button id="simple-btn-keyboard-nav" type="button" class="btn btn-default" uib-dropdown-toggle>
@@ -23,18 +21,18 @@
                         </ul>
                     </div>
                 </div>
-                <div class="col-sm-2">
-                    <label>Rowtype:</label>
-                    <div class="btn-group" uib-dropdown keyboard-nav>
-                        <button id="btn-row-type" type="button" class="btn btn-default" uib-dropdown-toggle>
-                            {{selectedRowType}} <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-row-type">
-                            <li role="menuitem" ng-repeat="a in rowTypes"><a ng-click="dropdownMenuRowTypeSelected(a)">{{a}}</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-sm-2">
+                <!--<div class="col-sm-2">-->
+                    <!--<label>Rowtype:</label>-->
+                    <!--<div class="btn-group" uib-dropdown keyboard-nav>-->
+                        <!--<button id="btn-row-type" type="button" class="btn btn-default" uib-dropdown-toggle>-->
+                            <!--{{selectedRowType}} <span class="caret"></span>-->
+                        <!--</button>-->
+                        <!--<ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-row-type">-->
+                            <!--<li role="menuitem" ng-repeat="a in rowTypes"><a ng-click="dropdownMenuRowTypeSelected(a)">{{a}}</a></li>-->
+                        <!--</ul>-->
+                    <!--</div>-->
+                <!--</div>-->
+                <div class="col-sm-3">
                     <label>Field:</label>
                     <div class="btn-group" uib-dropdown keyboard-nav>
                         <button id="btn-field-type" type="button" class="btn btn-default" uib-dropdown-toggle>
@@ -105,7 +103,6 @@
                 </div>
                 <div ng-controller="awarenessCtrl">
                     <div>
-
                         <div class="ibox float-e-margins col-md-10">
                             <div class="ibox-title">
                                 <h3 class="text-center">Field Awareness</h3>
@@ -144,7 +141,7 @@
                 </div>
 
 
-                <div class="row" ng-init="getTimings()">
+                <div class="row" ng-controller="timingsCtrl" ng-init="getTimings()">
                     <div class="col-sm-6">
                         <div class="ibox float-e-margins">
                             <div class="ibox-title">

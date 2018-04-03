@@ -34,6 +34,90 @@ function identityCtrl($scope, $state, principal) {
 
 }
 
+function volumeCtrl($scope, $http, $location, principal) {
+    $scope.$watchGroup(['sDate', 'eDate'], function() {
+        $scope.getVolumes();
+        $scope.getStats();
+    });
+    $scope.getVolumes = function() {
+        console.log('getting volumes');
+        // $http.get('/volumes').success(function(counts) {
+        //     console.log(counts)
+        //     $scope.volumes = counts;
+        // });
+        if (! $scope.sDate) {
+            return;
+        }
+        $http.get('/newvolumes', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(volumes) {
+            console.log(volumes);
+            var dates = new Set();
+            volumes.forEach(function(c) {
+                c['dates'].forEach(function(d) {
+                    dates.add(d['date']);
+                });
+            });
+            var xValues = {};
+            var counter = 0;
+            Array.from(dates).sort().forEach(function(d) {
+                xValues[d] = counter;
+                counter++;
+            });
+            var docIds = {};
+            var columns = [];
+            var xColumn = Object.keys(xValues);
+            volumes.forEach(function(c) {
+                for (var i = 1, column = new Array(xColumn.length); i < xColumn.length;) {
+                    column[i++] = 0;
+                }
+                column[0] = c['subdomain'];
+                docIds[c['subdomain']] = [];
+                c['dates'].forEach(function(d) {
+                    column[xValues[d['date']] + 1] = d['count'];
+                    docIds[c['subdomain']][xValues[d['date']]] = d['ids'];
+                });
+                columns.push(column);
+            });
+
+            var graph = c3.generate({
+                bindto: '#chart-volume',
+                data: {
+                    columns: columns,
+                    onclick: function(data) {
+                        principal['activityFilter'] = docIds[data['id']][data['index']];
+                        $location.path('activity');
+                        $scope.$apply();
+                    }
+                },
+                axis: {
+                    x: {
+                        type: 'category',
+                        categories: xColumn.map(function(d) {
+                            return d.substr(5);
+                        })
+                    }
+                },
+                padding: {
+                    right: 30
+                }
+            });
+        });
+    };
+    $scope.getStats = function() {
+        // $http.get('/stats').success(function(avg) {
+        //     $scope.stats['before'] = avg.data;
+        //     $scope.stats['after'] = avg.feedback;
+        // });
+        if (! $scope.sDate) {
+            return;
+        }
+        $http.get('/newstats', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(avg) {
+            $scope.stats = {};
+            $scope.stats['before'] = avg.data;
+            $scope.stats['after'] = avg.feedback;
+        });
+    };
+}
+
 function accuracyCtrl($scope, $location, $state, $http, principal) {
     function getDataForAccuracyFromDocument() {
         var _arr = ['amount', 'IBAN', 'message', 'name', 'person', 'street', 'number', 'zip'];
@@ -218,86 +302,6 @@ function accuracyCtrl($scope, $location, $state, $http, principal) {
     };
 }
 
-function statisticsCtrl($scope, $state, $location, principal, $http) {
-    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
-        $scope.getStatistics();
-    });
-    $scope.getStatistics = function() {
-        if (! $scope.sDate || ! $scope.selectedPageType) {
-            return;
-        }
-        principal.identity().then(function(identity) {
-            var columns = [];
-            var column = ['% accuracy of document'];
-            var documentIds = {};
-            $http.get('/newstatistics', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
-                var _arr = [];
-                var pageType_arr = [];
-                for (var i=20; i>=-1; i--) {
-                    pageType_arr[20 - i] = []
-                    if (i == 20) {
-                        _arr.push("100%");
-                    } else if (i == -1) {
-                        _arr.push("0%");
-                    } else  {
-                        _arr.push(String(i * 5 + 5) + "-" + String(i * 5));
-                    }
-                    var num = 0;
-                    for (var j in documentIds) {
-                        var correct_cnt = 0;
-                        var incorrect_cnt = 0;
-                        for (var k in documentIds[j]['annotations']) {
-                            if (documentIds[j]['annotations'][k]['correct'] == 'OK') {
-                                correct_cnt ++;
-                            } else {
-                                incorrect_cnt ++;
-                            }
-                        }
-                        var percent = correct_cnt / (correct_cnt + incorrect_cnt) * 100;
-                        if (i == 20) {
-                            if (percent == 100) {
-                                num ++;
-                                pageType_arr[20 - i].push(documentIds[j]['id']);
-                            }
-                        } else if (i == -1) {
-                            if (percent == 0) {
-                                num ++;
-                                pageType_arr[20 - i].push(documentIds[j]['id']);
-                            }
-                        } else {
-                            if (percent >= i * 5 && percent < (i + 1) * 5) {
-                                num ++;
-                                pageType_arr[20 - i].push(documentIds[j]['id']);
-                            }
-                        }
-                    }
-                    column.push(num);
-                }
-                columns.push(column);
-                var graph = c3.generate({
-                    bindto: '#statistics-chart',
-                    axis: {
-                        // rotated: true,
-                        x: {
-                            type: 'category',
-                            categories: _arr
-                        }
-                    },
-                    data: {
-                        columns: columns,
-                        type: 'bar',
-                        onclick: function(data) {
-                            principal['activityFilter'] = pageType_arr[data['index']];
-                            $location.path('activity');
-                            $scope.$apply();
-                        }
-                    }
-                });
-            });
-        });
-    };
-}
-
 function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
     var changedTolerance = false;
     var changedThreshold = false;
@@ -389,208 +393,181 @@ function awarenessCtrl($scope, $state, $http, $location, principal, $timeout) {
         if (! $scope.sDate || ! $scope.selectedFieldType) {
             return;
         }
-            var column_OK = ['OK'],
-             column_B = ['B'],
-             column_OK_x = ['OK_x'],
-             column_B_x = ['B_x'];
-            $http.get('/newawareness', {params: {"fieldType": $scope.selectedFieldType, "pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(data) {
-                var pageType_arr = [],
-                    cnt = 0;
+        var column_OK = ['OK'],
+            column_B = ['B'],
+            column_OK_x = ['OK_x'],
+            column_B_x = ['B_x'];
+        $http.get('/newawareness', {params: {"fieldType": $scope.selectedFieldType, "pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(data) {
+            var pageType_arr = [],
+                cnt = 0;
 
-                for (var i in data) {
-                    if (data[i]['annotations']['correct'] === 'B') {
-                        if (data[i]['annotations']['confidence'] == null) {
-                            data[i]['annotations']['confidence'] = 0;
-                        }
-                        column_B_x.push(parseInt(i) + 1);
-                        column_B.push(data[i]['annotations']['confidence']);
-                        pageType_arr[cnt] = data[i]['id'];
-                        cnt ++;
-                    } else if (data[i]['annotations']['correct'] == 'OK') {
-                        column_OK_x.push(parseInt(i) + 1);
-                        column_OK.push(data[i]['annotations']['confidence']);
-                        pageType_arr[cnt] = data[i]['id'];
-                        cnt ++;
+            for (var i in data) {
+                if (data[i]['annotations']['correct'] === 'B') {
+                    if (data[i]['annotations']['confidence'] == null) {
+                        data[i]['annotations']['confidence'] = 0;
                     }
-                }
-                var columns = [column_OK_x, column_B_x, column_OK, column_B];
-
-                $scope.column_B = column_B.slice(1).sort(function(a, b){return a > b});
-                $scope.graph = c3.generate({
-                    bindto: '#awareness-chart',
-                    axis: {
-                        y: {
-                            min: 0,
-                            max: 105,
-                            padding: 0
-                        }
-                    },
-                    data: {
-                        xs: {OK: 'OK_x', B: 'B_x'},
-                        columns: columns,
-                        type: 'scatter',
-                        onclick: function(data) {
-                            $location.path("view/review/" + pageType_arr[data['index']]);
-                            $scope.$apply();
-                        }
-                    },
-                    grid: {
-                        y: {
-                            lines: [{value: 100}]
-                        }
-                    },
-                    point: {
-                        r: 4
-                    }
-                });
-                // if ($scope.threshold != undefined) {
-                //     changedTolerance = true;
-                //     changedThreshold = true;
-                // }
-                $scope.threshold = 100;
-                $scope.tolerance = 0;
-                // updateThresholdLine();
-            });
-        // });
-    };
-
-}
-
-function viewCtrl($scope, $sce, $state, $location, principal) {
-    var prefixUrl = "http://localhost:5023/";
-    if ($state.params.viewPath) {
-        $scope.currentViewUrl = $sce.trustAsResourceUrl(prefixUrl + $state.params.viewPath + "/" + $state.params.viewId);
-        principal.currentViewUrl = $state.params.viewPath + "/" + $state.params.viewId;
-    } else {
-        $scope.currentViewUrl = $sce.trustAsResourceUrl(prefixUrl + principal.currentViewUrl);
-        $location.path("view/" + principal.currentViewUrl);
-    }
-    if (principal.currentViewUrl) {
-        principal.levels().then(function(levels){
-            var viewPath = principal.currentViewUrl.substr(0, principal.currentViewUrl.indexOf('/')),
-                viewId = principal.currentViewUrl.substr(principal.currentViewUrl.indexOf('/') + 1);
-            $scope.nextViewUrl = '#';
-            $scope.prevViewUrl = '#';
-            $scope.nextViewDisabled = true;
-            $scope.prevViewDisabled = true;
-            if (levels['docid'] && levels['docid'].indexOf(viewId) != -1) {
-                if (levels['docid'][levels['docid'].indexOf(viewId) + 1]) {
-                    $scope.nextViewUrl = "view/" + viewPath + "/" + levels['docid'][levels['docid'].indexOf(viewId) + 1];
-                    $scope.nextViewDisabled = false;
-                }
-                if (levels['docid'][levels['docid'].indexOf(viewId) - 1]) {
-                    $scope.prevViewUrl = "view/" +  viewPath + "/" + levels['docid'][levels['docid'].indexOf(viewId) - 1];
-                    $scope.prevViewDisabled = false;
+                    column_B_x.push(parseInt(i) + 1);
+                    column_B.push(data[i]['annotations']['confidence']);
+                    pageType_arr[cnt] = data[i]['id'];
+                    cnt ++;
+                } else if (data[i]['annotations']['correct'] == 'OK') {
+                    column_OK_x.push(parseInt(i) + 1);
+                    column_OK.push(data[i]['annotations']['confidence']);
+                    pageType_arr[cnt] = data[i]['id'];
+                    cnt ++;
                 }
             }
-        });
-    }
+            var columns = [column_OK_x, column_B_x, column_OK, column_B];
 
-    $scope.prevDoc = function() {
-        $location.path($scope.prevViewUrl);
-    }
-
-    $scope.nextDoc = function() {
-        $location.path($scope.nextViewUrl);
-    }
-
-    console.log($scope.currentViewUrl);
-}
-
-function uploadCtrl($scope, $http, $location, $state, FileUploader) {
-    $scope.uploader = new FileUploader({
-        url: '/upload'
-    });
-}
-
-function volumeCtrl($scope, $http, $location, principal) {
-    $scope.$watchGroup(['sDate', 'eDate'], function() {
-        $scope.getVolumes();
-        $scope.getStats();
-    });
-    $scope.getVolumes = function() {
-        console.log('getting volumes');
-        // $http.get('/volumes').success(function(counts) {
-        //     console.log(counts)
-        //     $scope.volumes = counts;
-        // });
-        if (! $scope.sDate) {
-            return;
-        }
-        $http.get('/newvolumes', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(volumes) {
-            console.log(volumes);
-            var dates = new Set();
-            volumes.forEach(function(c) {
-                c['dates'].forEach(function(d) {
-                    dates.add(d['date']);
-                });
-            });
-            var xValues = {};
-            var counter = 0;
-            Array.from(dates).sort().forEach(function(d) {
-                xValues[d] = counter;
-                counter++;
-            });
-            var docIds = {};
-            var columns = [];
-            var xColumn = Object.keys(xValues);
-            volumes.forEach(function(c) {
-                for (var i = 1, column = new Array(xColumn.length); i < xColumn.length;) {
-                    column[i++] = 0;
-                }
-                column[0] = c['subdomain'];
-                docIds[c['subdomain']] = [];
-                c['dates'].forEach(function(d) {
-                    column[xValues[d['date']] + 1] = d['count'];
-                    docIds[c['subdomain']][xValues[d['date']]] = d['ids'];
-                });
-                columns.push(column);
-            });
-
-            var graph = c3.generate({
-                bindto: '#chart-volume',
+            $scope.column_B = column_B.slice(1).sort(function(a, b){return a > b});
+            $scope.graph = c3.generate({
+                bindto: '#awareness-chart',
+                axis: {
+                    y: {
+                        min: 0,
+                        max: 105,
+                        padding: 0
+                    }
+                },
                 data: {
+                    xs: {OK: 'OK_x', B: 'B_x'},
                     columns: columns,
+                    type: 'scatter',
                     onclick: function(data) {
-                        principal['activityFilter'] = docIds[data['id']][data['index']];
-                        $location.path('activity');
+                        $location.path("view/review/" + pageType_arr[data['index']]);
                         $scope.$apply();
                     }
                 },
-                axis: {
-                    x: {
-                        type: 'category',
-                        categories: xColumn.map(function(d) {
-                            return d.substr(5);
-                        })
+                grid: {
+                    y: {
+                        lines: [{value: 100}]
                     }
                 },
-                padding: {
-                    right: 30
+                point: {
+                    r: 4
                 }
+            });
+            // if ($scope.threshold != undefined) {
+            //     changedTolerance = true;
+            //     changedThreshold = true;
+            // }
+            $scope.threshold = 100;
+            $scope.tolerance = 0;
+            // updateThresholdLine();
+        });
+        // });
+    };
+
+}
+
+function statisticsCtrl($scope, $state, $location, principal, $http) {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
+        $scope.getStatistics();
+    });
+    $scope.getStatistics = function() {
+        if (! $scope.sDate || ! $scope.selectedPageType) {
+            return;
+        }
+        principal.identity().then(function(identity) {
+            var columns = [];
+            var column = ['% accuracy of document'];
+            var documentIds = {};
+            $http.get('/newstatistics', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
+                var _arr = [];
+                var pageType_arr = [];
+                for (var i=20; i>=-1; i--) {
+                    pageType_arr[20 - i] = []
+                    if (i == 20) {
+                        _arr.push("100%");
+                    } else if (i == -1) {
+                        _arr.push("0%");
+                    } else  {
+                        _arr.push(String(i * 5 + 5) + "-" + String(i * 5));
+                    }
+                    var num = 0;
+                    for (var j in documentIds) {
+                        var correct_cnt = 0;
+                        var incorrect_cnt = 0;
+                        for (var k in documentIds[j]['annotations']) {
+                            if (documentIds[j]['annotations'][k]['correct'] == 'OK') {
+                                correct_cnt ++;
+                            } else {
+                                incorrect_cnt ++;
+                            }
+                        }
+                        var percent = correct_cnt / (correct_cnt + incorrect_cnt) * 100;
+                        if (i == 20) {
+                            if (percent == 100) {
+                                num ++;
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else if (i == -1) {
+                            if (percent == 0) {
+                                num ++;
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else {
+                            if (percent >= i * 5 && percent < (i + 1) * 5) {
+                                num ++;
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        }
+                    }
+                    column.push(num);
+                }
+                columns.push(column);
+                var graph = c3.generate({
+                    bindto: '#statistics-chart',
+                    axis: {
+                        // rotated: true,
+                        x: {
+                            type: 'category',
+                            categories: _arr
+                        }
+                    },
+                    data: {
+                        columns: columns,
+                        type: 'bar',
+                        onclick: function(data) {
+                            principal['activityFilter'] = pageType_arr[data['index']];
+                            $location.path('activity');
+                            $scope.$apply();
+                        }
+                    }
+                });
             });
         });
     };
-    $scope.getStats = function() {
-        // $http.get('/stats').success(function(avg) {
-        //     $scope.stats['before'] = avg.data;
-        //     $scope.stats['after'] = avg.feedback;
+}
+
+function timingsCtrl($scope, $http) {
+    $scope.$watchGroup(['sDate', 'eDate'], function() {
+        $scope.getTimings();
+    });
+
+    $scope.getTimings = function() {
+        // $http.get('/timings').success(function(timings) {
+        //     for (var timingIndex in timings) {
+        //         timings[timingIndex] /= 1000;
+        //     }
+        //     $scope.timings = timings;
         // });
         if (! $scope.sDate) {
             return;
         }
-        $http.get('/newstats', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(avg) {
-            $scope.stats['before'] = avg.data;
-            $scope.stats['after'] = avg.feedback;
+        $http.get('/newtimings', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
+            for (var timingIndex in timings) {
+                timings[timingIndex] /= 1000;
+            }
+            $scope.timings = timings;
         });
     };
 }
 
 function statsCtrl($scope, $http, $location, $state, principal) {
-    $scope.period = "month";
-    $scope.timings = null;
-    $scope.accuracyItems = [];
-    $scope.stats = {};
+    var default_autoThreshold = 70;
+    // principal.autoThreshold = {};
+    console.log(principal.autoThreshold);
     $scope.opts = {
         ranges: {
             'Today': [moment(), moment()],
@@ -630,6 +607,11 @@ function statsCtrl($scope, $http, $location, $state, principal) {
         principal.levels(enforce, pageType).then(function(levels){
             $scope.pageTypes = levels['pagetype'];
             $scope.fieldTypes = levels['fieldtype'];
+            for (var i in $scope.fieldTypes) {
+                if (principal.autoThreshold[$scope.fieldTypes[i]] == undefined) {
+                    principal.autoThreshold[$scope.fieldTypes[i]] = default_autoThreshold;
+                }
+            }
             $scope.rowTypes = levels['rowtype'];
             $scope.selectedPageType = principal.selectedPageType? principal.selectedPageType:$scope.pageTypes[0];
             principal.selectedPageType = $scope.selectedPageType;
@@ -637,7 +619,6 @@ function statsCtrl($scope, $http, $location, $state, principal) {
             principal.selectedFieldType = $scope.selectedFieldType;
             $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:$scope.rowTypes[0];
             principal.selectedRowType = $scope.selectedRowType;
-            $scope.getTimings();
         });
     };
     $scope.dropdownMenuPageTypeSelected = function(pageType) {
@@ -662,25 +643,259 @@ function statsCtrl($scope, $http, $location, $state, principal) {
             principal.selectedRowType = rowType;
         }
     };
+}
 
-    $scope.getTimings = function() {
-        // $http.get('/timings').success(function(timings) {
-        //     for (var timingIndex in timings) {
-        //         timings[timingIndex] /= 1000;
-        //     }
-        //     $scope.timings = timings;
-        // });
-        if (! $scope.sDate) {
+function autoDocCtrl($scope, $state, $location, principal, $http) {
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
+        $scope.getStatistics();
+    });
+    $scope.getStatistics = function() {
+        if (! $scope.sDate || ! $scope.selectedPageType) {
             return;
         }
-        $http.get('/newtimings', {params: {"sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
-            for (var timingIndex in timings) {
-                timings[timingIndex] /= 1000;
-            }
-            $scope.timings = timings;
+        principal.identity().then(function(identity) {
+            var columns = [];
+            var column = ['% accuracy of automation document'];
+            var documentIds = {};
+            $http.get('/newstatistics', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
+                var _arr = [];
+                var pageType_arr = [];
+                for (var i=20; i>=-1; i--) {
+                    pageType_arr[20 - i] = []
+                    if (i == 20) {
+                        _arr.push("100%");
+                    } else if (i == -1) {
+                        _arr.push("0%");
+                    } else  {
+                        _arr.push(String(i * 5 + 5) + "-" + String(i * 5));
+                    }
+                    var num = 0;
+                    for (var j in documentIds) {
+                        var correct_cnt = 0;
+                        var incorrect_cnt = 0;
+                        for (var k in documentIds[j]['annotations']) {
+                            if (documentIds[j]['annotations'][k]['confidence'] >= principal.autoThreshold[documentIds[j]['annotations'][k]['label']]) {
+                                correct_cnt ++;
+                            } else {
+                                incorrect_cnt ++;
+                            }
+                        }
+                        var percent = correct_cnt / (correct_cnt + incorrect_cnt) * 100;
+                        if (i == 20) {
+                            if (percent == 100) {
+                                num ++;
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else if (i == -1) {
+                            if (percent == 0) {
+                                num ++;
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        } else {
+                            if (percent >= i * 5 && percent < (i + 1) * 5) {
+                                num ++;
+                                pageType_arr[20 - i].push(documentIds[j]['id']);
+                            }
+                        }
+                    }
+                    column.push(num);
+                }
+                columns.push(column);
+                var graph = c3.generate({
+                    bindto: '#autoDoc-chart',
+                    axis: {
+                        // rotated: true,
+                        x: {
+                            type: 'category',
+                            categories: _arr
+                        }
+                    },
+                    data: {
+                        columns: columns,
+                        type: 'bar',
+                        onclick: function(data) {
+                            principal['activityFilter'] = pageType_arr[data['index']];
+                            $location.path('activity');
+                            $scope.$apply();
+                        }
+                    }
+                });
+            });
         });
     };
 }
+
+function autoFieldCtrl($scope, $location, $state, $http, principal) {
+    console.log(principal.autoThreshold);
+
+    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
+        getDataForAccuracyFromNewDocument();
+    });
+
+    function saveSliderValue(data) {
+        if (data['input'][0]['dataset']['label'] == 'total_threshold') {
+            $scope.ionSliderOptions1['from'] = data['fromNumber'];
+            for (var i in _arr) {
+                principal.autoThreshold[_arr[i]] = data['fromNumber'];
+            }
+            for (var i in counts) {
+                createSingleChart(i);
+            }
+            updateSliderValue(data['fromNumber']);
+        } else {
+            principal.autoThreshold[data['input'][0]['dataset']['label']] = data['fromNumber'];
+            for (var i in counts) {
+                if (counts[i]['_id']['label'] == data['input'][0]['dataset']['label']) {
+                    createSingleChart(i);
+                    break;
+                }
+            }
+
+            // updateSliderValue(data['fromNumber'], data['input'][0]['dataset']['label']);
+        }
+    }
+
+    function updateSliderValue(value) {
+        $("div.ng-isolate-scope").each(function(){
+            if(this.getAttribute('data-label') != 'total_threshold') {
+                this.updateData({
+                    from: principal.autoThreshold[this.getAttribute('data-label')]
+                });
+            }
+        });
+    }
+
+
+    $scope.sliderHeightStyle = function($last) {
+        return {
+            'height': $last ? '70px' : '50px' ,
+            'max-height': $last ? '70px' : '50px'
+        };
+    }
+
+    function loadSliderValue(data) {
+        console.log(data['input'][0]['dataset']['label']);
+        debugger;
+    }
+
+    $scope.ionSliderOptions1 = {
+        min: 0,
+        max: 100,
+        step: 0.1,
+        postfix: "%",
+        force_edges: true,
+        hideMinMax: true,
+        onFinish: saveSliderValue,
+    };
+
+    var _arr;
+    var groups = ['Correct & Above', 'Incorrect & Above', 'Correct & Below', 'Incorrect & Below'];
+    var columns;
+    var counts;
+
+    function createSingleChart(countIndex) {
+        var p_columns = [];
+        var cntCA = 0,
+            cntIA = 0,
+            cntCB = 0,
+            cntIB = 0;
+        for (var i in counts[countIndex]['accuracy']) {
+            if (counts[countIndex]['accuracy'][i]['correct'] == 'OK' && counts[countIndex]['accuracy'][i]['confidence'] >= principal.autoThreshold[counts[countIndex]['_id']['label']]) {
+                cntCA ++;
+            } else if (counts[countIndex]['accuracy'][i]['correct'] != 'OK' && counts[countIndex]['accuracy'][i]['confidence'] >=  principal.autoThreshold[counts[countIndex]['_id']['label']]) {
+                cntIA ++;
+            } else if (counts[countIndex]['accuracy'][i]['correct'] == 'OK' && counts[countIndex]['accuracy'][i]['confidence'] <  principal.autoThreshold[counts[countIndex]['_id']['label']]) {
+                cntCB ++;
+            } else if (counts[countIndex]['accuracy'][i]['correct'] != 'OK' && counts[countIndex]['accuracy'][i]['confidence'] <  principal.autoThreshold[counts[countIndex]['_id']['label']]) {
+                cntIB ++;
+            }
+        }
+        columns[0][counts[countIndex]['_id']['label']] = cntCA;
+        columns[1][counts[countIndex]['_id']['label']] = cntIA;
+        columns[2][counts[countIndex]['_id']['label']] = cntCB;
+        columns[3][counts[countIndex]['_id']['label']] = cntIB;
+        var cntTotal = cntCA + cntIA + cntCB + cntIB;
+        cntTotal = cntTotal === 0?1:cntTotal;
+        for (var i = 0; i < groups.length; i++) {
+            p_columns[i] = [];
+            p_columns[i].push(groups[i]);
+        }
+        p_columns[0].push(((cntCA / cntTotal) * 100).toFixed(2));
+        p_columns[1].push(((cntIA / cntTotal) * 100).toFixed(2));
+        p_columns[2].push(((cntCB / cntTotal) * 100).toFixed(2));
+        p_columns[3].push(((cntIB / cntTotal) * 100).toFixed(2));
+        // break;
+        var legendOption = countIndex == (counts.length - 1) ? true : false;
+        var graph = c3.generate({
+            bindto: '#autoField-chart' + countIndex,
+            axis: {
+                rotated: true,
+                x: {
+                    type: 'category',
+                    categories: [_arr[countIndex]],
+                    show: false
+                }
+            },
+            size: {
+                height: countIndex == (counts.length - 1) ? 70 : 50
+            },
+            data: {
+                columns: p_columns,
+                type: 'bar',
+                groups: [groups],
+                order: null,
+                colors: {
+                    'Correct & Above': 'rgb(44, 160, 44)',
+                    'InCorrect & Above': 'rgb(31, 119, 180)',
+                    'Correct & Below': 'rgb(214, 39, 40)',
+                    'Incorrect & Below': 'rgb(255, 127, 14)'
+                },
+                onclick: function(data) {
+                    $location.url('/activity/' + 'IBAN' + '/' + data.id);
+                    $scope.$apply();
+                }
+            },
+            tooltip: {
+                contents: function (d, defaultTitleFormat, defaultValueFormat, color) {
+                    var $$ = this, config = $$.config;
+                    defaultValueFormat = function (t, a, r) {
+                        return t + '%, ' + columns[groups.indexOf(r)][config.axis_x_categories[0]];
+                    };
+                    return c3.chart.internal.fn.getTooltipContent.apply(this, arguments);
+                }
+            },
+            legend: {
+                show: legendOption
+            }
+        });
+    }
+
+    function getDataForAccuracyFromNewDocument() {
+        $http.get('/autoField', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (res) {
+            counts = res;
+            _arr = [];
+            columns = [];
+
+            for (var i = 0; i < groups.length; i++) {
+                columns[i] = {};
+            }
+            for (var countIndex in counts) {
+                _arr.push(counts[countIndex]['_id']['label']);
+            }
+            for (var countIndex in counts) {
+                createSingleChart(countIndex);
+            }
+            updateSliderValue(50);
+        });
+    }
+
+    $scope.getAccuracy = function() {
+        principal.identity().then(function(identity) {
+            getDataForAccuracyFromNewDocument();
+        });
+    };
+}
+
 
 function activityCtrl($scope, $http, $location, $state, principal) {
     identity = {};
@@ -920,204 +1135,52 @@ function activityCtrl($scope, $http, $location, $state, principal) {
     }
 }
 
-function autoCtrl($scope, $http, $location, $state, principal) {
-    $scope.daterange = principal.daterange;
-    $scope.autoThreshold = 90;
-    $scope.$watch('daterange', function() {
-        $scope.sDate = $scope.daterange.data.startDate.format().substring(0, 10);
-        $scope.eDate = $scope.daterange.data.endDate.format().substring(0, 10);
-    }, true);
-
-    $scope.getPageTypes = function() {
+function viewCtrl($scope, $sce, $state, $location, principal) {
+    var prefixUrl = "http://localhost:5023/";
+    if ($state.params.viewPath) {
+        $scope.currentViewUrl = $sce.trustAsResourceUrl(prefixUrl + $state.params.viewPath + "/" + $state.params.viewId);
+        principal.currentViewUrl = $state.params.viewPath + "/" + $state.params.viewId;
+    } else {
+        $scope.currentViewUrl = $sce.trustAsResourceUrl(prefixUrl + principal.currentViewUrl);
+        $location.path("view/" + principal.currentViewUrl);
+    }
+    if (principal.currentViewUrl) {
         principal.levels().then(function(levels){
-            $scope.pageTypes = levels['pagetype'];
-            $scope.fieldTypes = levels['fieldtype'];
-            $scope.rowTypes = levels['rowtype'];
-            $scope.selectedPageType = $scope.selectedPageType? $scope.selectedPageType:'All';
-            $scope.selectedFieldType = $scope.selectedFieldType? $scope.selectedFieldType:$scope.fieldTypes[0];
-            $scope.selectedRowType = $scope.selectedRowType? $scope.selectedRowType:'All';
-        });
-    };
-    $scope.dropdownMenuPageTypeSelected = function(pageType) {
-        if (pageType != $scope.selectedPageType) {
-            $scope.selectedPageType = pageType;
-        }
-    };
-    $scope.dropdownMenuFieldTypeSelected = function(fieldType) {
-        if (fieldType != $scope.selectedFieldType) {
-            $scope.selectedFieldType = fieldType;
-        }
-    };
-    $scope.dropdownMenuRowTypeSelected = function(rowType) {
-        if (pageType != $scope.selectedRowType) {
-            $scope.selectedRowType = rowType;
-        }
-    };
-
-    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
-        $scope.getTimings();
-    });
-    $scope.getTimings = function() {
-        // $http.get('/timings').success(function(timings) {
-        //     for (var timingIndex in timings) {
-        //         timings[timingIndex] /= 1000;
-        //     }
-        //     $scope.timings = timings;
-        // });
-        $http.get('/newtimings', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(timings) {
-            for (var timingIndex in timings) {
-                timings[timingIndex] /= 1000;
-            }
-            $scope.timings = timings;
-        });
-    };
-}
-
-function autoThresholdCtrl($scope, $state, $location, principal, $http) {
-    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
-        $scope.getStatistics();
-    });
-    $scope.getStatistics = function() {
-        principal.identity().then(function(identity) {
-            var columns = [];
-            var column = ['statistics'];
-            var documentIds = {};
-            $http.get('/newstatistics', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function(documentIds) {
-                var _arr = [];
-                var pageType_arr = [];
-                for (var i=20; i>=-1; i--) {
-                    pageType_arr[20 - i] = []
-                    if (i == 20) {
-                        _arr.push("100%");
-                    } else if (i == -1) {
-                        _arr.push("0%");
-                    } else  {
-                        _arr.push(String(i * 5 + 5) + "~" + String(i * 5) + "%");
-                    }
-                    var num = 0;
-                    for (var j in documentIds) {
-                        var correct_cnt = 0;
-                        var incorrect_cnt = 0;
-                        for (var k in documentIds[j]['annotations']) {
-                            if (documentIds[j]['annotations'][k]['confidence'] >= $scope.autoThreshold) {
-                                correct_cnt ++;
-                            } else {
-                                incorrect_cnt ++;
-                            }
-                        }
-                        var percent = correct_cnt / (correct_cnt + incorrect_cnt) * 100;
-                        if (i == 20) {
-                            if (percent == 100) {
-                                num ++;
-                                pageType_arr[20 - i].push(documentIds[j]['id']);
-                            }
-                        } else if (i == -1) {
-                            if (percent == 0) {
-                                num ++;
-                                pageType_arr[20 - i].push(documentIds[j]['id']);
-                            }
-                        } else {
-                            if (percent >= i * 5 && percent < (i + 1) * 5) {
-                                num ++;
-                                pageType_arr[20 - i].push(documentIds[j]['id']);
-                            }
-                        }
-                    }
-                    column.push(num);
+            var viewPath = principal.currentViewUrl.substr(0, principal.currentViewUrl.indexOf('/')),
+                viewId = principal.currentViewUrl.substr(principal.currentViewUrl.indexOf('/') + 1);
+            $scope.nextViewUrl = '#';
+            $scope.prevViewUrl = '#';
+            $scope.nextViewDisabled = true;
+            $scope.prevViewDisabled = true;
+            if (levels['docid'] && levels['docid'].indexOf(viewId) != -1) {
+                if (levels['docid'][levels['docid'].indexOf(viewId) + 1]) {
+                    $scope.nextViewUrl = "view/" + viewPath + "/" + levels['docid'][levels['docid'].indexOf(viewId) + 1];
+                    $scope.nextViewDisabled = false;
                 }
-                columns.push(column);
-                var graph = c3.generate({
-                    bindto: '#autoThreshold-chart',
-                    axis: {
-                        // rotated: true,
-                        x: {
-                            type: 'category',
-                            categories: _arr
-                        }
-                    },
-                    data: {
-                        columns: columns,
-                        type: 'bar',
-                        onclick: function(data) {
-                            principal['activityFilter'] = pageType_arr[data['index']];
-                            $location.path('activity');
-                            $scope.$apply();
-                        }
-                    }
-                });
-            });
-        });
-    };
-}
-
-function autoAccuracyCtrl($scope, $location, $state, $http, principal) {
-    $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
-        getDataForAccuracyFromNewDocument();
-    });
-
-    function getDataForAccuracyFromNewDocument() {
-        $http.get('/autoAccuracy', {params: {"pageType": $scope.selectedPageType, "sDate": $scope.sDate, "eDate": $scope.eDate}}).success(function (counts) {
-
-            // debugger;
-            var _arr = [];
-            var groups = ['Correct & Above', 'Incorrect & Above', 'Correct & Below', 'Incorrect & Below'];
-            var columns = [];
-            for (var countIndex in counts) {
-                _arr.push(counts[countIndex]['_id']['label']);
-            }
-            for (var i = 0; i < groups.length; i++) {
-                columns[i] = [];
-                columns[i].push(groups[i]);
-                for (var j = 0; j < _arr.length; j++) {
-                    var emptyValue = true;
-                    for (var countIndex in counts){
-                        if (counts[countIndex]['_id']['label'] === _arr[j] && counts[countIndex]['_id']['correct'] === groups[i]) {
-                            columns[i].push(counts[countIndex]['counts']);
-                            emptyValue = false;
-                            break;
-                        }
-                    }
-                    if (emptyValue) {
-                        columns[i].push(0);
-                    }
+                if (levels['docid'][levels['docid'].indexOf(viewId) - 1]) {
+                    $scope.prevViewUrl = "view/" +  viewPath + "/" + levels['docid'][levels['docid'].indexOf(viewId) - 1];
+                    $scope.prevViewDisabled = false;
                 }
             }
-            var graph = c3.generate({
-                bindto: '#autoAccuracy-chart',
-                axis: {
-                    rotated: true,
-                    x: {
-                        type: 'category',
-                        categories: _arr
-                    }
-                },
-                data: {
-                    columns: columns,
-                    type: 'bar',
-                    groups: [groups],
-                    order: null,
-                    colors: {
-                        'Correct & Above': 'rgb(44, 160, 44)',
-                        'InCorrect & Above': 'rgb(31, 119, 180)',
-                        'Correct & Below': 'rgb(214, 39, 40)',
-                        'Incorrect & Below': 'rgb(255, 127, 14)'
-                    },
-                    onclick: function(data) {
-                        $location.url('/activity/' + 'IBAN' + '/' + data.id);
-                        $scope.$apply();
-                    }
-                }
-            });
         });
     }
 
-    $scope.getAccuracy = function() {
-        principal.identity().then(function(identity) {
-            getDataForAccuracyFromNewDocument();
-        });
-    };
+    $scope.prevDoc = function() {
+        $location.path($scope.prevViewUrl);
+    }
+
+    $scope.nextDoc = function() {
+        $location.path($scope.nextViewUrl);
+    }
+
+    console.log($scope.currentViewUrl);
 }
 
+function uploadCtrl($scope, $http, $location, $state, FileUploader) {
+    $scope.uploader = new FileUploader({
+        url: '/upload'
+    });
+}
 
 /**
  * MainCtrl - controller
@@ -3790,53 +3853,7 @@ function ModalInstanceCtrl($scope, $uibModalInstance) {
  * ionSlider - Controller for data for Ion Slider plugin
  * used in Advanced plugin view
  */
-function ionSlider() {
-    this.ionSliderOptions1 = {
-        min: 0,
-        max: 5000,
-        type: 'double',
-        prefix: "$",
-        maxPostfix: "+",
-        prettify: false,
-        hasGrid: true
-    };
-    this.ionSliderOptions2 = {
-        min: 0,
-        max: 10,
-        type: 'single',
-        step: 0.1,
-        postfix: " carats",
-        prettify: false,
-        hasGrid: true
-    };
-    this.ionSliderOptions3 = {
-        min: -50,
-        max: 50,
-        from: 0,
-        postfix: "°",
-        prettify: false,
-        hasGrid: true
-    };
-    this.ionSliderOptions4 = {
-        values: [
-            "January", "February", "March",
-            "April", "May", "June",
-            "July", "August", "September",
-            "October", "November", "December"
-        ],
-        type: 'single',
-        hasGrid: true
-    };
-    this.ionSliderOptions5 = {
-        min: 10000,
-        max: 100000,
-        step: 100,
-        postfix: " km",
-        from: 55000,
-        hideMinMax: true,
-        hideFromTo: false
-    };
-}
+
 
 /**
  * wizardCtrl - Controller for wizard functions
@@ -5973,12 +5990,13 @@ angular
     .controller('accuracyCtrl', accuracyCtrl)
     .controller('statisticsCtrl', statisticsCtrl)
     .controller('awarenessCtrl', awarenessCtrl)
+    .controller('timingsCtrl', timingsCtrl)
     .controller('activityCtrl', activityCtrl)
     .controller('uploadCtrl', uploadCtrl)
     .controller('viewCtrl', viewCtrl)
-    .controller('autoCtrl', autoCtrl)
-    .controller('autoThresholdCtrl', autoThresholdCtrl)
-    .controller('autoAccuracyCtrl', autoAccuracyCtrl)
+    .controller('autoDocCtrl', autoDocCtrl)
+    .controller('autoFieldCtrl', autoFieldCtrl)
+
     .controller('MainCtrl', MainCtrl);
 
 

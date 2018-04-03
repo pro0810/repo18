@@ -121,7 +121,7 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
         data: {
             pageTitle: 'Automation'
         },
-        controller: 'autoCtrl',
+        controller: 'statsCtrl',
         resolve: {
             loadPlugin: function($ocLazyLoad) {
                 return $ocLazyLoad.load([{
@@ -138,6 +138,11 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
                     name: 'daterangepicker',
                     files: ['js/plugins/daterangepicker/angular-daterangepicker.js'],
                     serie: true
+                }, {
+                    name: 'nouislider',
+                    files: ['css/plugins/nouslider/jquery.nouislider.css', 'js/plugins/nouslider/jquery.nouislider.min.js', 'js/plugins/nouslider/angular-nouislider.js']
+                }, {
+                    files: ['css/plugins/ionRangeSlider/ion.rangeSlider.css', 'css/plugins/ionRangeSlider/ion.rangeSlider.skinHTML5.css', 'js/plugins/ionRangeSlider/ion.rangeSlider.min.js']
                 }]);
             }
         }
@@ -1698,6 +1703,7 @@ angular.module('inspinia')
 
       return {
         daterange: daterange,
+        autoThreshold: {},
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
         },
@@ -1793,7 +1799,7 @@ angular.module('inspinia')
             $q.all([fieldPromise, pageTypesPromise, docIdsPromise])
                 .then(
                   function(results){
-                    console.log(results);
+                    // console.log(results);
                     _levels = {};
                     _levels['fieldtype'] = [];
                     _levels['pagetype'] = ['All'];
