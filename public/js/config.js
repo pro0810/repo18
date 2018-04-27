@@ -1818,8 +1818,10 @@ angular.module('inspinia')
                     if (results[2]['data'][0]) {
                        _levels['docid'] = results[2]['data'][0]['data'];
                     }
+                    if (results[3] && results[3]['data']) {
+                        _levels['fieldThreshold'] = results[3]['data'][0]['data'];
+                    }
 
-                    _levels['fieldThreshold'] = results[3]['data'][0]['data'];
                     deferred.resolve(_levels);
                   },
                   function(errors) {
