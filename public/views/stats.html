@@ -9,18 +9,41 @@
     <div id="page-wrapper" class="gray-bg {{$state.current.name}}">
         <!-- Main view  -->
             <div class="row wrapper border-bottom white-bg page-heading p-sm">
-                <span class="lead m-r-sm m-b-none filter-bar">Statistics</span>
-                <div class="col-sm-3">
-                    <label>Pagetype:</label>
-                    <div class="btn-group" uib-dropdown keyboard-nav>
-                        <button id="simple-btn-keyboard-nav" type="button" class="btn btn-default" uib-dropdown-toggle>
-                            {{selectedPageType}} <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="simple-btn-keyboard-nav">
-                            <li role="menuitem" ng-repeat="a in pageTypes"><a ng-click="dropdownMenuPageTypeSelected(a)">{{a}}</a></li>
-                        </ul>
-                    </div>
+                <div class="navbar-header">
+                    <span class="lead m-r-sm m-b-none filter-bar">Statistics</span>
                 </div>
+                <ul class="nav navbar-top-links navbar-right">
+                    <li>
+                        <label>Pagetype:</label>
+                        <div class="btn-group" uib-dropdown keyboard-nav>
+                            <button id="simple-btn-keyboard-nav" type="button" class="btn btn-default" uib-dropdown-toggle>
+                                {{selectedPageType}} <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="simple-btn-keyboard-nav">
+                                <li role="menuitem" ng-repeat="a in pageTypes"><a ng-click="dropdownMenuPageTypeSelected(a)">{{a}}</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li >
+                        <label>Field:</label>
+                        <div class="btn-group" uib-dropdown keyboard-nav>
+                            <button id="btn-field-type" type="button" class="btn btn-default" uib-dropdown-toggle>
+                                {{selectedFieldType}} <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-field-type">
+                                <li role="menuitem" ng-repeat="a in fieldTypes"><a ng-click="dropdownMenuFieldTypeSelected(a)">{{a}}</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <label>Timeframe:</label>
+                        <div class="btn-group daterangepicker_input">
+                            <input type="text" date-range-picker class="btn-default form-control date-picker pull-right" ng-model="daterange.data" />
+                            <i class="fa fa-calendar glyphicon glyphicon-calendar"></i>
+                        </div>
+                    </li>
+                </ul>
+
                 <!--<div class="col-sm-2">-->
                     <!--<label>Rowtype:</label>-->
                     <!--<div class="btn-group" uib-dropdown keyboard-nav>-->
@@ -32,24 +55,7 @@
                         <!--</ul>-->
                     <!--</div>-->
                 <!--</div>-->
-                <div class="col-sm-3">
-                    <label>Field:</label>
-                    <div class="btn-group" uib-dropdown keyboard-nav>
-                        <button id="btn-field-type" type="button" class="btn btn-default" uib-dropdown-toggle>
-                            {{selectedFieldType}} <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" uib-dropdown-menu role="menu" aria-labelledby="btn-field-type">
-                            <li role="menuitem" ng-repeat="a in fieldTypes"><a ng-click="dropdownMenuFieldTypeSelected(a)">{{a}}</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-sm-4">
-                    <label>Timeframe:</label>
-                    <div class="btn-group daterangepicker_input">
-                        <input type="text" date-range-picker class="btn-default form-control date-picker pull-right" ng-model="daterange.data" />
-                        <i class="fa fa-calendar glyphicon glyphicon-calendar"></i>
-                    </div>
-                </div>
+
             </div>
             <div class="wrapper wrapper-content animated fadeInRight">
                 <div class="row" ng-controller="volumeCtrl">

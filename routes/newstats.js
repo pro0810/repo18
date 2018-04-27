@@ -28,7 +28,7 @@ function makeInitRules(req) {
         }
     }];
 
-    if (req.query.pageType && req.query.pageType != 'All') {
+    if (req.query.pageType && req.query.pageType !== 'All') {
         rules.push({$project:
             {
                 _id: 0,
@@ -77,7 +77,6 @@ function makeInitRulesForPost(req) {
 }
 
 module.exports = function(app) {
-
     app.get('/newstats', function(req, res) {
         var rules = makeInitRules(req);
         rules.push(

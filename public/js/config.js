@@ -1699,11 +1699,12 @@ angular.module('inspinia')
       var _identity = undefined,
         _authenticated = false,
         _levels = undefined,
+        autoThreshold={},
         daterange = {data: {startDate: moment().subtract(60, "days"), endDate: moment()}};
 
       return {
         daterange: daterange,
-        autoThreshold: {},
+        autoThreshold: autoThreshold,
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
         },
@@ -1794,9 +1795,9 @@ angular.module('inspinia')
                 eDate  = daterange.data.endDate.format().substring(0, 10) + "T23:59:59.999Z",
                 fieldPromise = $http.get('/getfields', {params: {"pageType": selectedPageType, "sDate": sDate, "eDate": eDate}}),
                 pageTypesPromise = $http.get('/getpagetypes', {params: {"sDate": sDate, "eDate": eDate}}),
-                docIdsPromise = $http.get('/getdocids');
-
-            $q.all([fieldPromise, pageTypesPromise, docIdsPromise])
+                docIdsPromise = $http.get('/getdocids'),
+                fieldThresholdPromise = $http.get('/fieldsThresholds');
+            $q.all([fieldPromise, pageTypesPromise, docIdsPromise, fieldThresholdPromise])
                 .then(
                   function(results){
                     // console.log(results);
@@ -1817,6 +1818,8 @@ angular.module('inspinia')
                     if (results[2]['data'][0]) {
                        _levels['docid'] = results[2]['data'][0]['data'];
                     }
+
+                    _levels['fieldThreshold'] = results[3]['data'][0]['data'];
                     deferred.resolve(_levels);
                   },
                   function(errors) {

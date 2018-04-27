@@ -91,6 +91,7 @@ app.use(isAuthenticated());
 // routes
 require('./routes/stats.js')(app);
 require('./routes/newstats.js')(app);
+require('./routes/thresholds.js')(app);
 require('./routes/activity.js')(app);
 require('./routes/upload.js')(app);
 

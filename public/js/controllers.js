@@ -564,9 +564,9 @@ function timingsCtrl($scope, $http) {
     };
 }
 
-function statsCtrl($scope, $http, $location, $state, principal) {
+function statsCtrl($scope, $http, $location, $state, principal, $uibModal, $timeout) {
     var default_autoThreshold = 70;
-    // principal.autoThreshold = {};
+    principal.autoThreshold = {};
     console.log(principal.autoThreshold);
     $scope.opts = {
         ranges: {
@@ -607,11 +607,8 @@ function statsCtrl($scope, $http, $location, $state, principal) {
         principal.levels(enforce, pageType).then(function(levels){
             $scope.pageTypes = levels['pagetype'];
             $scope.fieldTypes = levels['fieldtype'];
-            for (var i in $scope.fieldTypes) {
-                if (principal.autoThreshold[$scope.fieldTypes[i]] == undefined) {
-                    principal.autoThreshold[$scope.fieldTypes[i]] = default_autoThreshold;
-                }
-            }
+            principal.autoThreshold = levels['fieldThreshold'];
+            $scope.fieldThreshold = principal.autoThreshold;
             $scope.rowTypes = levels['rowtype'];
             $scope.selectedPageType = principal.selectedPageType? principal.selectedPageType:$scope.pageTypes[0];
             principal.selectedPageType = $scope.selectedPageType;
@@ -643,12 +640,37 @@ function statsCtrl($scope, $http, $location, $state, principal) {
             principal.selectedRowType = rowType;
         }
     };
+
+    $scope.publishThresholds = function() {
+        // debugger;
+        var modalInstance = $uibModal.open({
+            templateUrl: 'views/modal.html',
+            controller: 'ModalInstanceCtrl',
+            windowClass: "animated fadeIn"
+        });
+        $http.post('/fieldsThresholds', {fieldsThresholds: principal.autoThreshold}).success(function (res) {
+            // debugger;
+            $timeout(function() {
+                modalInstance.close();
+            }, 1000);
+            console.log('updated fieldThresholdDb');
+        });
+    };
 }
 
 function autoDocCtrl($scope, $state, $location, principal, $http) {
     $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
-        $scope.getStatistics();
+        if ($scope.selectedPageType && $scope.sDate && $scope.eDate) {
+            $scope.getStatistics();
+        }
     });
+    $scope.$watch('fieldThreshold', function() {
+        if ($scope.fieldThreshold) {
+            console.log($scope.fieldThreshold);
+            $scope.getStatistics();
+        }
+    }, true);
+
     $scope.getStatistics = function() {
         if (! $scope.sDate || ! $scope.selectedPageType) {
             return;
@@ -666,7 +688,7 @@ function autoDocCtrl($scope, $state, $location, principal, $http) {
                         _arr.push("100%");
                     } else if (i == -1) {
                         _arr.push("0%");
-                    } else  {
+                    } else {
                         _arr.push(String(i * 5 + 5) + "-" + String(i * 5));
                     }
                     var num = 0;
@@ -726,8 +748,6 @@ function autoDocCtrl($scope, $state, $location, principal, $http) {
 }
 
 function autoFieldCtrl($scope, $location, $state, $http, principal) {
-    console.log(principal.autoThreshold);
-
     $scope.$watchGroup(['selectedPageType', 'sDate', 'eDate'], function() {
         getDataForAccuracyFromNewDocument();
     });
@@ -738,6 +758,7 @@ function autoFieldCtrl($scope, $location, $state, $http, principal) {
             for (var i in _arr) {
                 principal.autoThreshold[_arr[i]] = data['fromNumber'];
             }
+
             for (var i in counts) {
                 createSingleChart(i);
             }
@@ -750,9 +771,10 @@ function autoFieldCtrl($scope, $location, $state, $http, principal) {
                     break;
                 }
             }
-
             // updateSliderValue(data['fromNumber'], data['input'][0]['dataset']['label']);
         }
+
+        $scope.$apply();
     }
 
     function updateSliderValue(value) {
@@ -765,13 +787,12 @@ function autoFieldCtrl($scope, $location, $state, $http, principal) {
         });
     }
 
-
     $scope.sliderHeightStyle = function($last) {
         return {
             'height': $last ? '70px' : '50px' ,
             'max-height': $last ? '70px' : '50px'
         };
-    }
+    };
 
     function loadSliderValue(data) {
         console.log(data['input'][0]['dataset']['label']);
@@ -885,7 +906,7 @@ function autoFieldCtrl($scope, $location, $state, $http, principal) {
             for (var countIndex in counts) {
                 createSingleChart(countIndex);
             }
-            updateSliderValue(50);
+            updateSliderValue();
         });
     }
 
@@ -895,7 +916,6 @@ function autoFieldCtrl($scope, $location, $state, $http, principal) {
         });
     };
 }
-
 
 function activityCtrl($scope, $http, $location, $state, principal) {
     identity = {};
@@ -3762,7 +3782,7 @@ function modalDemoCtrl($scope, $uibModal) {
         var modalInstance = $uibModal.open({
             templateUrl: 'views/modal_example2.html',
             controller: 'ModalInstanceCtrl',
-            windowClass: "animated fadeIn"
+            windowClass: "animated fadeInY"
         });
     };
 
@@ -3792,7 +3812,6 @@ function ModalInstanceCtrl($scope, $uibModalInstance) {
     $scope.cancel = function() {
         $uibModalInstance.dismiss('cancel');
     };
-
 
     $scope.states = [
         'Alabama',
@@ -3846,7 +3865,6 @@ function ModalInstanceCtrl($scope, $uibModalInstance) {
         'Wisconsin',
         'Wyoming'
     ];
-
 };
 
 /**
@@ -5996,7 +6014,8 @@ angular
     .controller('viewCtrl', viewCtrl)
     .controller('autoDocCtrl', autoDocCtrl)
     .controller('autoFieldCtrl', autoFieldCtrl)
-
+    .controller('modalDemoCtrl', modalDemoCtrl)
+    .controller('ModalInstanceCtrl', ModalInstanceCtrl)
     .controller('MainCtrl', MainCtrl);
 
 

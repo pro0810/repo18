@@ -29,12 +29,21 @@
     z-index: 100;
 }
 
+.page-heading > .navbar-right {
+    margin-right: 220px;
+}
+
+.page-heading > .navbar-right > li {
+    margin-left: 20px;
+}
+
 .page-heading + div {
     padding-top: 95px;
 }
 
 span.filter-bar {
     float: left;
+    margin-right: 200px;
 }
 
 .filter-group-right {
