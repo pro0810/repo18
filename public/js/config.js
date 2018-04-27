@@ -1699,12 +1699,12 @@ angular.module('inspinia')
       var _identity = undefined,
         _authenticated = false,
         _levels = undefined,
-        autoThreshold={},
+
         daterange = {data: {startDate: moment().subtract(60, "days"), endDate: moment()}};
 
       return {
         daterange: daterange,
-        autoThreshold: autoThreshold,
+        autoThreshold: {},
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
         },
@@ -1818,7 +1818,7 @@ angular.module('inspinia')
                     if (results[2]['data'][0]) {
                        _levels['docid'] = results[2]['data'][0]['data'];
                     }
-                    if (results[3] && results[3]['data']) {
+                    if (results[3]['data'][0]) {
                         _levels['fieldThreshold'] = results[3]['data'][0]['data'];
                     }
 

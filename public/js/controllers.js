@@ -566,8 +566,6 @@ function timingsCtrl($scope, $http) {
 
 function statsCtrl($scope, $http, $location, $state, principal, $uibModal, $timeout) {
     var default_autoThreshold = 70;
-    principal.autoThreshold = {};
-    console.log(principal.autoThreshold);
     $scope.opts = {
         ranges: {
             'Today': [moment(), moment()],
@@ -607,7 +605,17 @@ function statsCtrl($scope, $http, $location, $state, principal, $uibModal, $time
         principal.levels(enforce, pageType).then(function(levels){
             $scope.pageTypes = levels['pagetype'];
             $scope.fieldTypes = levels['fieldtype'];
-            principal.autoThreshold = levels['fieldThreshold'];
+            for (var i in $scope.fieldTypes) {
+                if (principal.autoThreshold[$scope.fieldTypes[i]] === undefined) {
+                    if (levels['fieldThreshold'] && levels['fieldThreshold'][$scope.fieldTypes[i]]) {
+                        principal.autoThreshold[$scope.fieldTypes[i]] = levels['fieldThreshold'][$scope.fieldTypes[i]];
+                    } else {
+                        principal.autoThreshold[$scope.fieldTypes[i]] = default_autoThreshold;
+                    }
+
+                }
+            }
+            // principal.autoThreshold = levels['fieldThreshold'];
             $scope.fieldThreshold = principal.autoThreshold;
             $scope.rowTypes = levels['rowtype'];
             $scope.selectedPageType = principal.selectedPageType? principal.selectedPageType:$scope.pageTypes[0];
