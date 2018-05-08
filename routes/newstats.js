@@ -100,6 +100,27 @@ module.exports = function(app) {
         });
     });
 
+    app.get('/avg-accuracy', function(req, res) {
+        var rules = makeInitRules(req);
+        rules.push(
+            {$project: {_id: 0, id: 1, annotations: "$feedback.annotations", date: {$dateToString: {format: '%Y-%m-%d', date: '$timings.receive'}}}},
+            {$unwind: "$annotations"}
+        );
+        if (req.query.fieldType !== 'average') {
+            rules.push(
+                {$match: {"annotations.label": {$eq: req.query.fieldType}}}
+            );
+        }
+        rules.push(
+            {$group: {_id: {date: "$date"}, data: {$push: "$annotations"}}},
+            {$project: {_id: 0, data: 1, date: "$_id.date"}},
+            {$sort : {"date"  : 1}}
+        );
+        Document.aggregate(rules).then(function(counts) {
+            res.status(200).send(counts);
+        });
+    });
+
     app.get('/newaccuracy', function(req, res) {
         var rules = makeInitRules(req);
         rules.push(
