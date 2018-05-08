@@ -94,6 +94,7 @@ typings/
 
 # dotenv environment variables file
 .env
+fieldThresholds.json
 
 
 
