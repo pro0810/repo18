@@ -18,4 +18,4 @@ var NewDocument = new Schema({
 
 
 
-module.exports = mongoose.model('documents_new', NewDocument);
+module.exports = mongoose.model('bpost', NewDocument);

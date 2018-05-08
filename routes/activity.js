@@ -46,7 +46,7 @@ module.exports = function(app) {
         });
         rules.push({
           $eq: ["$data." + req.params.key, "$feedback." + req.params.key]
-        })
+        });
         break;
       case 'incorrect':
         rules.push({
@@ -60,7 +60,7 @@ module.exports = function(app) {
         });
         rules.push({
           $ne: ["$data." + req.params.key, "$feedback." + req.params.key]
-        })
+        });
         break;
       default:
         res.status(404).send();
@@ -71,13 +71,13 @@ module.exports = function(app) {
       $redact: {
         $cond: {
           if: {
-            $and: rules,
+            $and: rules
           },
           then: "$$KEEP",
           else: "$$PRUNE"
         }
       }
-    }]).then(documents => {
+    }]).then(function(documents) {
       res.status(200).send(documents);
     });
   });
