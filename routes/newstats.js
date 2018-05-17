@@ -28,6 +28,12 @@ function makeInitRules(req) {
         }
     }];
 
+    if (req.query.field && req.query.accuracy) {
+        rules.push(
+            {$match: {"feedback.annotations": {$elemMatch: {label: req.query.field, correct: req.query.accuracy}}}}
+        )
+    }
+
     if (req.query.pageType && req.query.pageType !== 'All') {
         rules.push({$project:
             {
@@ -55,7 +61,7 @@ function makeInitRules(req) {
     return rules;
 }
 
-function makeInitRulesForPost(req) {
+function makeInitRulesForActivityPost(req) {
     var rules = [];
     console.log(req.body.docIds);
     for (var i in req.body.docIds) {
@@ -243,7 +249,7 @@ module.exports = function(app) {
     });
 
     app.post('/newactivity', function(req, res){
-        var rules = makeInitRulesForPost(req);
+        var rules = makeInitRulesForActivityPost(req);
         rules.push(
             {$project: {_id: false}}
         );

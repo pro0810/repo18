@@ -62,13 +62,13 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, IdlePro
     })
     .state('activity', {
       parent: 'site',
-      url: "/activity/:key/:state",
+      url: "/activity/:field/:accuracy",
       params: {
-        key: {
+        field: {
           squash: true,
           value: null
         },
-        state: {
+        accuracy: {
           squash: true,
           value: null
         },
@@ -178,12 +178,12 @@ angular.module('inspinia')
       var _identity = undefined,
         _authenticated = false,
         _levels = undefined,
-
         daterange = {data: {startDate: moment().subtract(60, "days"), endDate: moment()}};
 
       return {
         daterange: daterange,
         autoThreshold: {},
+        docIds: [],
         isIdentityResolved: function() {
           return angular.isDefined(_identity);
         },
@@ -281,14 +281,14 @@ angular.module('inspinia')
                   function(results){
                     // console.log(results);
                     _levels = {};
-                    _levels['fieldtype'] = [];
+                    _levels['fieldtype'] = ['average'];
                     _levels['pagetype'] = ['All'];
                     _levels['rowtype'] = ['All'];
                     _levels['docid'] = [];
                     for (var i in results[0]['data']) {
                       _levels['fieldtype'].push(results[0]['data'][i]['label']);
                     }
-                    _levels['fieldtype'].push('average');
+                    // _levels['fieldtype'].push('average');
                     if (results[1]['data'][0]) {
                         for (var i in results[1]['data'][0]['data']) {
                             _levels['pagetype'].push(results[1]['data'][0]['data'][i]);

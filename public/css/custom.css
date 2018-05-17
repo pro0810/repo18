@@ -29,11 +29,11 @@
     z-index: 100;
 }
 
-.page-heading > .navbar-right {
+.page-heading > .navbar-top-links {
     margin-right: 220px;
 }
 
-.page-heading > .navbar-right > li {
+.page-heading > .navbar-top-links > li {
     margin-left: 20px;
 }
 
@@ -83,10 +83,10 @@ span.filter-bar {
     font-size: 14px;
 }
 
-.nav-docids button {
-    min-width: 162px;
-    margin-right: 60px;
-}
+/*.nav-docids button {*/
+    /*min-width: 162px;*/
+    /*margin-right: 60px;*/
+/*}*/
 
 .irs-slider {
     width: 15px !important;

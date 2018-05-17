@@ -65,42 +65,44 @@
                                 <h3 class="text-center">Volume</h3>
                             </div>
                             <div class="ibox-content">
-                                <div class="row">
-                                    <div class="col-lg-8" id="chart-volume" style='height: 300px;'  ng-init="getVolumes()"></div>
-                                    <div class="col-lg-4" ng-init="getStats()">
-                                        <ul class="stat-list">
-                                            <li>
-                                                <h2 class="no-margins">{{stats.before * 100 | number:2}}</h2>
-                                                <small>Accuracy before feedback</small>
-                                                <!-- <div class="stat-percent">{{stats.before * 100 | number:0}}% <i class="fa fa-level-up text-navy"></i></div> -->
-                                                <div class="progress progress-mini">
-                                                    <div style="width: {{stats.before * 100 | number:0}}%;" class="progress-bar"></div>
-                                                </div>
-                                            </li>
-                                            <li>
-                                                <h2 class="no-margins ">{{stats.after * 100 | number:2}}</h2>
-                                                <small>Accuracy after feedback</small>
-                                                <!-- <div class="stat-percent">{{stats.after * 100 | number:0}}% <i class="fa fa-level-down text-danger"></i></div> -->
-                                                <div class="progress progress-mini">
-                                                    <!-- <div style="width: {{stats.after * 100 | number:0}}%;" class="progress-bar progress-bar-danger"></div> -->
-                                                    <div style="width: {{stats.after * 100 | number:0}}%;" class="progress-bar"></div>
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                                <!--<div class="row">-->
+                                    <div id="chart-volume" style='height: 300px;'  ng-init="getVolumes()"></div>
+                                    <!--<div class="col-lg-4" ng-init="getStats()">-->
+                                        <!--<ul class="stat-list">-->
+                                            <!--<li>-->
+                                                <!--<h2 class="no-margins">{{stats.before * 100 | number:2}}</h2>-->
+                                                <!--<small>Accuracy before feedback</small>-->
+                                                <!--&lt;!&ndash; <div class="stat-percent">{{stats.before * 100 | number:0}}% <i class="fa fa-level-up text-navy"></i></div> &ndash;&gt;-->
+                                                <!--<div class="progress progress-mini">-->
+                                                    <!--<div style="width: {{stats.before * 100 | number:0}}%;" class="progress-bar"></div>-->
+                                                <!--</div>-->
+                                            <!--</li>-->
+                                            <!--<li>-->
+                                                <!--<h2 class="no-margins ">{{stats.after * 100 | number:2}}</h2>-->
+                                                <!--<small>Accuracy after feedback</small>-->
+                                                <!--&lt;!&ndash; <div class="stat-percent">{{stats.after * 100 | number:0}}% <i class="fa fa-level-down text-danger"></i></div> &ndash;&gt;-->
+                                                <!--<div class="progress progress-mini">-->
+                                                    <!--&lt;!&ndash; <div style="width: {{stats.after * 100 | number:0}}%;" class="progress-bar progress-bar-danger"></div> &ndash;&gt;-->
+                                                    <!--<div style="width: {{stats.after * 100 | number:0}}%;" class="progress-bar"></div>-->
+                                                <!--</div>-->
+                                            <!--</li>-->
+                                        <!--</ul>-->
+                                    <!--</div>-->
+                                <!--</div>-->
                             </div>
                         </div>
                     </div>
                 </div>
                 <div ng-controller="avgAccuracyCtrl">
-                    <div class="col-lg-12">
-                        <div class="ibox float-e-margins">
-                            <div class="ibox-title">
-                                <h3 class="text-center">Average Accuracy</h3>
-                            </div>
-                            <div class="ibox-content">
-                                <div id="chart-avg-accuracy" style='height: 300px;'></div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h3 class="text-center">Average Accuracy</h3>
+                                </div>
+                                <div class="ibox-content">
+                                    <div id="chart-avg-accuracy" style='height: 300px;'></div>
+                                </div>
                             </div>
                         </div>
                     </div>
